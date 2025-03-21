@@ -16,6 +16,23 @@ Class {
 	#package : 'Seaguller-Core'
 }
 
+{ #category : 'instance creation' }
+SeagullerLocation class >> fromJSON: aDictionary [
+
+	^ self new
+		  setJSON: aDictionary;
+		  yourself
+]
+
+{ #category : 'instance creation' }
+SeagullerLocation class >> name: aString url: aZnUrl [
+
+	^ self new
+		  name: aString;
+		  url: aZnUrl;
+		  yourself
+]
+
 { #category : 'accessing' }
 SeagullerLocation >> action [
 
@@ -34,6 +51,20 @@ SeagullerLocation >> actionIcon [
 	action = #download ifTrue: [ ^ self iconNamed: #down ].
 	action = #downloadAndOpen ifTrue: [ ^ self iconNamed: #go ].
 	^ self iconNamed: #empty
+]
+
+{ #category : 'converting' }
+SeagullerLocation >> asJSON [
+
+	^ Dictionary new
+		  at: 'name' put: self name asString;
+		  at: 'url' put: self url asString;
+		  at: 'action' put: self action asString;
+		  at: 'interval' put: self interval asString;
+		  at: 'lastFetchTime' put: self lastFetchTime asString;
+		  at: 'hasLatestCopy' put: self hasLatestCopy;
+		  at: 'hasDeadUrl' put: self hasDeadUrl;
+		  yourself
 ]
 
 { #category : 'accessing' }
@@ -115,10 +146,16 @@ SeagullerLocation >> forceDownload [
 			lastFetchTime := DateAndTime now ] ]
 ]
 
-{ #category : 'testing' }
+{ #category : 'accessing' }
 SeagullerLocation >> hasDeadUrl [
 
 	^ hasDeadUrl = true
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> hasDeadUrl: aBoolean [
+
+	hasDeadUrl := aBoolean = true
 ]
 
 { #category : 'testing' }
@@ -128,10 +165,16 @@ SeagullerLocation >> hasDownload [
 	^ false
 ]
 
-{ #category : 'testing' }
+{ #category : 'accessing' }
 SeagullerLocation >> hasLatestCopy [
 
-	^ hasLatestCopy = true and: [ self hasDownload ]
+	^ hasLatestCopy = true
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> hasLatestCopy: aBoolean [
+
+	hasLatestCopy := aBoolean = true
 ]
 
 { #category : 'accessing' }
@@ -186,6 +229,18 @@ SeagullerLocation >> lastDownloadTime [
 ]
 
 { #category : 'accessing' }
+SeagullerLocation >> lastFetchTime [
+
+	^ lastFetchTime
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> lastFetchTime: aDateAndTime [
+
+	lastFetchTime := aDateAndTime ifNotNil: #asDateAndTime
+]
+
+{ #category : 'accessing' }
 SeagullerLocation >> name [
 
 	^ name
@@ -212,9 +267,32 @@ SeagullerLocation >> openMacOS [
 ]
 
 { #category : 'private' }
+SeagullerLocation >> setJSON: aDictionary [
+
+	aDictionary
+		at: 'name' ifPresent: [ :string | self name: string ];
+		at: 'url' ifPresent: [ :string | self url: string ];
+		at: 'action' ifPresent: [ :string | self action: string ];
+		at: 'interval' ifPresent: [ :string | self interval: string ];
+		at: 'lastFetchTime'
+		ifPresent: [ :string | self lastFetchTime: string ];
+		at: 'hasLatestCopy'
+		ifPresent: [ :string | self hasLatestCopy: string ];
+		at: 'hasDeadUrl' ifPresent: [ :string | self hasDeadUrl: string ]
+]
+
+{ #category : 'private' }
 SeagullerLocation >> shellEscape: aString [
 
 	^ '''' , (aString copyReplaceAll: '''' with: '''"''"''') , ''''
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> timeToFetch [
+
+	^ lastFetchTime
+		  ifNotNil: [ interval - (DateAndTime now - lastFetchTime) ]
+		  ifNil: [ -1 second ]
 ]
 
 { #category : 'accessing' }
