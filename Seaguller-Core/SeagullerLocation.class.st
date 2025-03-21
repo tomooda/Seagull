@@ -3,9 +3,14 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'name',
-		'url',
 		'action',
-		'lastDownloadTime'
+		'interval',
+		'lastFetchTime',
+		'hasLatestCopy',
+		'hasDeadUrl',
+		'isUpdating',
+		'client',
+		'lock'
 	],
 	#category : 'Seaguller-Core',
 	#package : 'Seaguller-Core'
@@ -23,43 +28,123 @@ SeagullerLocation >> action: aSymbol [
 	action := aSymbol asSymbol
 ]
 
-{ #category : 'initialize' }
+{ #category : 'accessing' }
+SeagullerLocation >> actionIcon [
+
+	action = #download ifTrue: [ ^ self iconNamed: #down ].
+	action = #downloadAndOpen ifTrue: [ ^ self iconNamed: #go ].
+	^ self iconNamed: #empty
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> availableActions [
+
+	^ #( doNothing download downloadAndOpen )
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> client [
+
+	^ client ifNil: [ client := ZnClient new ]
+]
+
+{ #category : 'controlling' }
+SeagullerLocation >> critical: aBlock [
+
+	^ lock critical: aBlock
+]
+
+{ #category : 'accessing' }
 SeagullerLocation >> defaultAction [
 
-	^ #download
+	^ #doNothing
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> defaultInterval [
+
+	^ 1 day
 ]
 
 { #category : 'operations' }
-SeagullerLocation >> getIfModifiedDo: aBlock [
+SeagullerLocation >> download [
 
-	<script:
-	'self new url: ''https://viennatalk.org/''; lastDownloadTime: (DateAndTime year: 2026 month: 1); getIfModifiedDo: [:response | self halt ]'>
-	| client |
-	client := ZnClient new
-		          url: self url;
-		          yourself.
-	lastDownloadTime ifNotNil: [
-		client
-			headerAt: 'If-Modified-Since'
-			put: (self ifModifiedSinceStringFrom: lastDownloadTime) ].
-	client head.
-	client response code = 200 ifTrue: [ aBlock cull: client ]
+	self critical: [
+		self downloadFileReferenceDo: [ :ref |
+			isUpdating := true.
+			self withIfModifiedSince.
+			client downloadTo: ref.
+			hasLatestCopy := true.
+			isUpdating := false.
+			lastFetchTime := DateAndTime now ] ]
 ]
 
-{ #category : 'utilities' }
-SeagullerLocation >> ifModifiedSinceStringFrom: aDateAndTime [
+{ #category : 'accessing' }
+SeagullerLocation >> downloadFileReferenceDo: aBlock [
 
-	| utc |
-	utc := aDateAndTime asUTC.
-	^ '{day-name}, {day} {month} {year} {hour}:{minute}:{second} GMT'
-		  format: {
-				  ('day-name' -> utc dayOfWeekName).
-				  ('day' -> utc dayOfMonth).
-				  ('month' -> utc monthName).
-				  ('year' -> utc year).
-				  ('hour' -> utc hour).
-				  ('minute' -> utc minute).
-				  ('second' -> utc second) } asDictionary
+	(name notNil and: [ name notEmpty ]) ifTrue: [
+		| ref |
+		ref := (FileLocator seaguller / 'downloads') ensureCreateDirectory
+		       / name asFileName.
+		self url lastPathSegment ifNotNil: [ :basename |
+			ref := ref withExtension: basename asFileReference extension ].
+		aBlock value: ref ]
+]
+
+{ #category : 'operations' }
+SeagullerLocation >> fetch [
+
+	self critical: [
+		self withIfModifiedSince.
+		client head.
+		hasLatestCopy := client response code = 304.
+		hasDeadUrl := client response code >= 400.
+		lastFetchTime := DateAndTime now ]
+]
+
+{ #category : 'operations' }
+SeagullerLocation >> forceDownload [
+
+	self critical: [
+		self downloadFileReferenceDo: [ :ref |
+			isUpdating := true.
+			self withoutIfModifiedSince.
+			client downloadTo: ref.
+			hasLatestCopy := true.
+			isUpdating := false.
+			lastFetchTime := DateAndTime now ] ]
+]
+
+{ #category : 'testing' }
+SeagullerLocation >> hasDeadUrl [
+
+	^ hasDeadUrl = true
+]
+
+{ #category : 'testing' }
+SeagullerLocation >> hasDownload [
+
+	self downloadFileReferenceDo: [ :ref | ^ ref exists ].
+	^ false
+]
+
+{ #category : 'testing' }
+SeagullerLocation >> hasLatestCopy [
+
+	^ hasLatestCopy = true and: [ self hasDownload ]
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> icon [
+
+	self hasDeadUrl ifTrue: [ ^ self iconNamed: #trash ].
+	self isUpdating ifTrue: [ ^ self iconNamed: #refreshCircling ].
+	^ self hasDownload
+		  ifTrue: [
+			  self hasLatestCopy
+				  ifTrue: [ self iconNamed: #box ]
+				  ifFalse: [ self iconNamed: #exception ] ]
+		  ifFalse: [ self iconNamed: #empty ]
 ]
 
 { #category : 'initialize' }
@@ -67,19 +152,37 @@ SeagullerLocation >> initialize [
 
 	super initialize.
 	name := String new.
-	action := self defaultAction
+	action := self defaultAction.
+	hasLatestCopy := false.
+	hasDeadUrl := false.
+	isUpdating := false.
+	lock := Semaphore forMutualExclusion
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> interval [
+
+	^ interval
+]
+
+{ #category : 'accessing' }
+SeagullerLocation >> interval: aDuration [
+
+	interval := aDuration asDuration
+]
+
+{ #category : 'testing' }
+SeagullerLocation >> isUpdating [
+
+	^ isUpdating = true
 ]
 
 { #category : 'accessing' }
 SeagullerLocation >> lastDownloadTime [
 
-	^ lastDownloadTime
-]
-
-{ #category : 'accessing' }
-SeagullerLocation >> lastDownloadTime: aDateAndTime [
-
-	lastDownloadTime := aDateAndTime asDateAndTime
+	self downloadFileReferenceDo: [ :ref |
+		ref exists ifTrue: [ ^ ref modificationTime ] ].
+	^ nil
 ]
 
 { #category : 'accessing' }
@@ -94,14 +197,62 @@ SeagullerLocation >> name: aString [
 	name := aString asString
 ]
 
+{ #category : 'operations' }
+SeagullerLocation >> open [
+
+	self critical: [
+		OSPlatform current isMacOSX ifTrue: [ self openMacOS ] ]
+]
+
+{ #category : 'private' }
+SeagullerLocation >> openMacOS [
+
+	self downloadFileReferenceDo: [ :ref |
+		LibC system: ('open ' , (self shellEscape: ref pathString)) asUTF8Bytes ]
+]
+
+{ #category : 'private' }
+SeagullerLocation >> shellEscape: aString [
+
+	^ '''' , (aString copyReplaceAll: '''' with: '''"''"''') , ''''
+]
+
 { #category : 'accessing' }
 SeagullerLocation >> url [
 
-	^ url
+	^ self client request url asZnUrl
 ]
 
 { #category : 'accessing' }
 SeagullerLocation >> url: aZnUrl [
 
-	url := aZnUrl asZnUrl
+	self client url: aZnUrl asZnUrl
+]
+
+{ #category : 'private' }
+SeagullerLocation >> withIfModifiedSince [
+
+	self lastDownloadTime ifNotNil: [ :mtime |
+		| utc |
+		utc := mtime asUTC.
+		self client
+			headerAt: 'If-Modified-Since'
+			put:
+				('{day-name}, {day} {month} {year} {hour}:{minute}:{second} GMT'
+					 format: {
+							 ('day-name' -> utc dayOfWeekName).
+							 ('day' -> utc dayOfMonth).
+							 ('month' -> utc monthName).
+							 ('year' -> utc year).
+							 ('hour' -> utc hour).
+							 ('minute' -> utc minute).
+							 ('second' -> utc second) } asDictionary) ]
+]
+
+{ #category : 'private' }
+SeagullerLocation >> withoutIfModifiedSince [
+
+	self client request headers
+		removeKey: 'If-Modified-Since'
+		ifAbsent: [  ]
 ]
