@@ -52,16 +52,21 @@ SeagullDownloadLocation >> readyToDownload [
 { #category : 'testing' }
 SeagullDownloadLocation >> readyToOpen [
 
-	| remote local |
-	remote := self lastModifiedTimeOnServer.
-	local := self lastOpenTime.
-	remote isNil ifTrue: [ ^ false ].
-	local isNil ifTrue: [ ^ true ].
-	^ local < remote
+	| local view |
+	local := self lastModifiedTimeOfDownloadFile.
+	view := self lastOpenTime.
+	local isNil ifTrue: [ ^ false ].
+	view isNil ifTrue: [ ^ true ].
+	^ view < local
 ]
 
 { #category : 'testing' }
 SeagullDownloadLocation >> readyToUpdate [
 
+	| remote local |
+	remote := self lastModifiedTimeOnServer.
+	local := self lastModifiedTimeOfDownloadFile.
+	remote isNil ifTrue: [ ^ true ].
+	local isNil ifTrue: [ ^ true ].
 	^ self readyToDownload not
 ]

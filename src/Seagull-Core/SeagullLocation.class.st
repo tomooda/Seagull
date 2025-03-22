@@ -13,14 +13,14 @@ Class {
 		'httpClient',
 		'downloadDirectory'
 	],
-	#classInstVars : [
-		'downloadingIcon',
-		'readyToOpenIcon',
-		'readyToUpdateIcon',
-		'notReadyToOpenIcon',
-		'notReadyToUpdateIcon',
-		'readyToDownloadIcon',
-		'notReadyToDownloadIcon'
+	#classVars : [
+		'DownloadingIcon',
+		'NotReadyToDownloadIcon',
+		'NotReadyToOpenIcon',
+		'NotReadyToUpdateIcon',
+		'ReadyToDownloadIcon',
+		'ReadyToOpenIcon',
+		'ReadyToUpdateIcon'
 	],
 	#category : 'Seagull-Core-Locations',
 	#package : 'Seagull-Core',
@@ -30,7 +30,7 @@ Class {
 { #category : 'icons' }
 SeagullLocation class >> downloadingIcon [
 
-	^ downloadingIcon ifNil: [
+	^ DownloadingIcon ifNil: [
 		  | reload box icon |
 		  reload := ((Smalltalk ui iconNamed: #refreshCircling) magnifyBy:
 			             0.8) darker: 0.3.
@@ -41,7 +41,7 @@ SeagullLocation class >> downloadingIcon [
 			  drawImage: box at: 0 @ 0;
 			  translucentImage: reload at: box extent - reload extent;
 			  flush.
-		  downloadingIcon := icon ]
+		  DownloadingIcon := icon ]
 ]
 
 { #category : 'instance creation' }
@@ -76,8 +76,8 @@ SeagullLocation class >> name: aString url: aZnUrl [
 { #category : 'icons' }
 SeagullLocation class >> notReadyToDownloadIcon [
 
-	^ notReadyToDownloadIcon ifNil: [
-		  notReadyToDownloadIcon := (self readyToDownloadIcon
+	^ NotReadyToDownloadIcon ifNil: [
+		  NotReadyToDownloadIcon := (self readyToDownloadIcon
 			                             asFormOfDepth: 32) collectColors: [ :c |
 			                            | v |
 			                            v := c red + c green + c blue / 3.0.
@@ -91,8 +91,8 @@ SeagullLocation class >> notReadyToDownloadIcon [
 { #category : 'icons' }
 SeagullLocation class >> notReadyToOpenIcon [
 
-	^ notReadyToOpenIcon ifNil: [
-		  notReadyToOpenIcon := (self readyToOpenIcon asFormOfDepth: 32)
+	^ NotReadyToOpenIcon ifNil: [
+		  NotReadyToOpenIcon := (self readyToOpenIcon asFormOfDepth: 32)
 			                        collectColors: [ :c |
 				                        | v |
 				                        v := c red + c green + c blue / 3.0.
@@ -106,8 +106,8 @@ SeagullLocation class >> notReadyToOpenIcon [
 { #category : 'icons' }
 SeagullLocation class >> notReadyToUpdateIcon [
 
-	^ notReadyToUpdateIcon ifNil: [
-		  notReadyToUpdateIcon := (self readyToUpdateIcon asFormOfDepth: 32)
+	^ NotReadyToUpdateIcon ifNil: [
+		  NotReadyToUpdateIcon := (self readyToUpdateIcon asFormOfDepth: 32)
 			                          collectColors: [ :c |
 				                          | v |
 				                          v := c red + c green + c blue / 3.0.
@@ -121,21 +121,21 @@ SeagullLocation class >> notReadyToUpdateIcon [
 { #category : 'icons' }
 SeagullLocation class >> readyToDownloadIcon [
 
-	^ readyToDownloadIcon ifNil: [
-		  readyToDownloadIcon := self iconNamed: #box ]
+	^ ReadyToDownloadIcon ifNil: [
+		  ReadyToDownloadIcon := self iconNamed: #box ]
 ]
 
 { #category : 'icons' }
 SeagullLocation class >> readyToOpenIcon [
 
-	^ readyToOpenIcon ifNil: [ readyToOpenIcon := self iconNamed: #go ]
+	^ ReadyToOpenIcon ifNil: [ ReadyToOpenIcon := self iconNamed: #go ]
 ]
 
 { #category : 'icons' }
 SeagullLocation class >> readyToUpdateIcon [
 
-	^ readyToUpdateIcon ifNil: [
-		  readyToOpenIcon := self iconNamed: #refreshCircling ]
+	^ ReadyToUpdateIcon ifNil: [
+		  ReadyToUpdateIcon := self iconNamed: #refreshCircling ]
 ]
 
 { #category : 'converting' }
@@ -186,21 +186,25 @@ SeagullLocation >> doUpdateAction [
 SeagullLocation >> download [
 
 	^ self downloadFileReferenceDo: [ :fileReference |
-		  self httpClientDo: [ :client |
-			  client get.
-			  lastAccessTime := DateAndTime now.
-			  client response ifNotNil: [ :response |
-				  response isSuccess ifTrue: [
-					  lastModifiedTimeOnServer := (response headers
-						                               at: 'Last-Modified'
-						                               ifAbsent: [ nil ])
-						                              ifNotNil: [ :string |
-						                              ZnUtils parseHttpDate: string ]
-						                              ifNil: [ lastAccessTime ].
-					  client downloadEntityTo: fileReference.
-					  ^ true ].
-				  response isNotModified ifTrue: [ ^ false ] ].
-			  SeagullDeadUrl signal ] ]
+		  self
+			  ifModifiedSince: self lastModifiedTimeOfDownloadFile
+			  httpClientDo: [ :client |
+				  client
+					  streaming: true;
+					  get.
+				  lastAccessTime := DateAndTime now.
+				  client response ifNotNil: [ :response |
+					  response isSuccess ifTrue: [
+						  lastModifiedTimeOnServer := (response headers
+							                               at: 'Last-Modified'
+							                               ifAbsent: [ nil ])
+							                              ifNotNil: [ :string |
+							                              ZnUtils parseHttpDate: string ]
+							                              ifNil: [ lastAccessTime ].
+						  client downloadEntityTo: fileReference.
+						  ^ true ].
+					  response isNotModified ifTrue: [ ^ false ] ].
+				  SeagullDeadUrl signal ] ]
 ]
 
 { #category : 'icons' }
@@ -243,20 +247,24 @@ SeagullLocation >> downloadingIcon [
 { #category : 'operations' }
 SeagullLocation >> fetch [
 
-	^ self httpClientDo: [ :client |
-		  client head.
-		  lastAccessTime := DateAndTime now.
-		  client response ifNotNil: [ :response |
-			  response isSuccess ifTrue: [
-				  lastModifiedTimeOnServer := (response headers
-					                               at: 'Last-Modified'
-					                               ifAbsent: [ nil ])
-					                              ifNotNil: [ :string |
-					                              ZnUtils parseHttpDate: string ]
-					                              ifNil: [ lastAccessTime ].
-				  ^ true ].
-			  response isNotModified ifTrue: [ ^ false ] ].
-		  SeagullDeadUrl signal ]
+	^ self
+		  ifModifiedSince: self lastModifiedTimeOnServer
+		  httpClientDo: [ :client |
+			  client
+				  streaming: false;
+				  head.
+			  lastAccessTime := DateAndTime now.
+			  client response ifNotNil: [ :response |
+				  response isSuccess ifTrue: [
+					  lastModifiedTimeOnServer := (response headers
+						                               at: 'Last-Modified'
+						                               ifAbsent: [ nil ])
+						                              ifNotNil: [ :string |
+						                              ZnUtils parseHttpDate: string ]
+						                              ifNil: [ lastAccessTime ].
+					  ^ true ].
+				  response isNotModified ifTrue: [ ^ false ] ].
+			  SeagullDeadUrl signal ]
 ]
 
 { #category : 'accessing' }
@@ -314,10 +322,22 @@ SeagullLocation >> hasUpdatesOnServerToOpen [
 { #category : 'http' }
 SeagullLocation >> httpClientDo: aBlock [
 
+	^ self ifModifiedSince: nil httpClientDo: aBlock
+]
+
+{ #category : 'icons' }
+SeagullLocation >> iconNamed: aSymbol [
+
+	aSymbol = #downloading ifTrue: [ ^ self downloadingIcon ].
+	^ super iconNamed: aSymbol
+]
+
+{ #category : 'http' }
+SeagullLocation >> ifModifiedSince: aDateAndTimeOrNil httpClientDo: aBlock [
+
 	^ lock critical: [
-		  lastModifiedTimeOnServer
-			  ifNotNil: [
-			  httpClient setIfModifiedSince: lastModifiedTimeOnServer ]
+		  aDateAndTimeOrNil
+			  ifNotNil: [ httpClient setIfModifiedSince: aDateAndTimeOrNil ]
 			  ifNil: [
 				  httpClient request headers
 					  removeKey: 'If-Modified-Since'
@@ -327,13 +347,6 @@ SeagullLocation >> httpClientDo: aBlock [
 			  do: [ :ex |
 				  hasDeadUrl := true.
 				  ex return: nil ] ]
-]
-
-{ #category : 'icons' }
-SeagullLocation >> iconNamed: aSymbol [
-
-	aSymbol = #downloading ifTrue: [ ^ self downloadingIcon ].
-	^ super iconNamed: aSymbol
 ]
 
 { #category : 'initialization' }
@@ -441,7 +454,8 @@ SeagullLocation >> openFileMacOS [
 
 	self downloadFileReferenceDo: [ :ref |
 		LibC system:
-			('open ' , (self shellEscape: ref pathString)) asUTF8Bytes ]
+			('open ' , (self shellEscape: ref pathString)) asUTF8Bytes.
+		lastOpenTime := DateAndTime now ]
 ]
 
 { #category : 'operations' }
@@ -454,7 +468,8 @@ SeagullLocation >> openUrl [
 SeagullLocation >> openUrlMacOS [
 
 	LibC system:
-		('open ' , (self shellEscape: self url asString)) asUTF8Bytes
+		('open ' , (self shellEscape: self url asString)) asUTF8Bytes.
+	lastOpenTime := DateAndTime now
 ]
 
 { #category : 'operations' }

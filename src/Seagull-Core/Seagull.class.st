@@ -81,19 +81,25 @@ Seagull >> initializePresenters [
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
 				                  evaluated: [ :item | item updateButtonIcon ])
-				                 action: [ :item | item doUpdateAction ];
+				                 action: [ :item |
+					                 item doUpdateAction.
+					                 locationList refresh ];
 				                 beNotExpandable;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
 				                  evaluated: [ :item | item downloadButtonIcon ])
-				                 action: [ :item | item doDownloadAction ];
+				                 action: [ :item |
+					                 item doDownloadAction.
+					                 locationList refresh ];
 				                 beNotExpandable;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
 				                  evaluated: [ :item | item openButtonIcon ])
-				                 action: [ :item | item doOpenAction ];
+				                 action: [ :item |
+					                 item doOpenAction.
+					                 locationList refresh ];
 				                 beNotExpandable;
 				                 yourself);
 		                yourself
