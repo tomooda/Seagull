@@ -1,22 +1,23 @@
 Class {
-	#name : 'Seaguller',
+	#name : 'Seagull',
 	#superclass : 'SpPresenter',
 	#instVars : [
 		'locationList'
 	],
-	#category : 'Seaguller-Core',
-	#package : 'Seaguller-Core'
+	#category : 'Seagull-Core-UI',
+	#package : 'Seagull-Core',
+	#tag : 'UI'
 }
 
 { #category : 'instance creation' }
-Seaguller class >> open [
+Seagull class >> open [
 
 	<script>
 	^ self new open
 ]
 
 { #category : 'converting' }
-Seaguller >> asJSON [
+Seagull >> asJSON [
 
 	^ Dictionary new
 		  at: 'locations' put: (locationList items collect: #asJSON);
@@ -24,20 +25,20 @@ Seaguller >> asJSON [
 ]
 
 { #category : 'layout' }
-Seaguller >> defaultLayout [
+Seagull >> defaultLayout [
 
 	^ SpBoxLayout newVertical add: locationList
 ]
 
 { #category : 'initialization' }
-Seaguller >> initialize [
+Seagull >> initialize [
 
 	super initialize.
 	self loadSettings
 ]
 
 { #category : 'initialization' }
-Seaguller >> initializePresenters [
+Seagull >> initializePresenters [
 
 	super initializePresenters.
 	locationList := self newTable
@@ -61,16 +62,29 @@ Seaguller >> initializePresenters [
 				                  evaluated: [ :location | location interval ])
 				                 width: 100;
 				                 yourself);
-		                addColumn: ((SpImageTableColumn
+		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
-				                  evaluated: [ :location | location actionIcon ])
+				                  evaluated: [ :item | item updateButtonIcon ])
+				                 action: [ :item | item doUpdateAction ];
+				                 width: 20;
+				                 yourself);
+		                addColumn: ((SeagullButtonTableColumn
+				                  title: ''
+				                  evaluated: [ :item | item downloadButtonIcon ])
+				                 action: [ :item | item doDownloadAction ];
+				                 width: 20;
+				                 yourself);
+		                addColumn: ((SeagullButtonTableColumn
+				                  title: ''
+				                  evaluated: [ :item | item openButtonIcon ])
+				                 action: [ :item | item doOpenAction ];
 				                 width: 20;
 				                 yourself);
 		                yourself
 ]
 
 { #category : 'initialization' }
-Seaguller >> initializeWindow: aSpWindowPresenter [
+Seagull >> initializeWindow: aSpWindowPresenter [
 
 	super initializeWindow: aSpWindowPresenter.
 	aSpWindowPresenter
@@ -79,7 +93,7 @@ Seaguller >> initializeWindow: aSpWindowPresenter [
 ]
 
 { #category : 'operations-settings' }
-Seaguller >> loadSettings [
+Seagull >> loadSettings [
 
 	FileLocator seaguller / 'settings.json' ifExists: [ :ref |
 		ref readStreamDo: [ :stream |
@@ -91,7 +105,7 @@ Seaguller >> loadSettings [
 ]
 
 { #category : 'operations-settings' }
-Seaguller >> saveSettings [
+Seagull >> saveSettings [
 
 	[
 	FileLocator seaguller / 'settings.json.tmp' writeStreamDo: [ :stream |
@@ -108,9 +122,9 @@ Seaguller >> saveSettings [
 ]
 
 { #category : 'private' }
-Seaguller >> setJSON: aDictionary [
+Seagull >> setJSON: aDictionary [
 
 	aDictionary at: 'location' ifPresent: [ :locations |
 		locationList items: (locations collect: [ :location |
-				 SeagullerLocation fromJSON: location ]) ]
+				 SeagullLocation fromJSON: location ]) ]
 ]

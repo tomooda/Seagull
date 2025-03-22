@@ -1,6 +1,6 @@
 Extension { #name : 'FileLocator' }
 
-{ #category : '*Seaguller-Core' }
+{ #category : '*Seagull-Core' }
 FileLocator class >> seaguller [
 
 	^ (self documents / 'Seaguller') ensureCreateDirectory
