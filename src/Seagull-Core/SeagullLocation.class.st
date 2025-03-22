@@ -10,7 +10,8 @@ Class {
 		'hasDeadUrl',
 		'isDownloading',
 		'lock',
-		'httpClient'
+		'httpClient',
+		'downloadDirectory'
 	],
 	#classInstVars : [
 		'downloadingIcon',
@@ -41,6 +42,12 @@ SeagullLocation class >> downloadingIcon [
 			  translucentImage: reload at: box extent - reload extent;
 			  flush.
 		  downloadingIcon := icon ]
+]
+
+{ #category : 'instance creation' }
+SeagullLocation class >> example [
+
+	^ self name: 'Example' url: 'https://example.com/'
 ]
 
 { #category : 'instance creation' }
@@ -145,6 +152,12 @@ SeagullLocation >> asJSON [
 		  yourself
 ]
 
+{ #category : 'accessing' }
+SeagullLocation >> defaultDownloadDirectory [
+
+	^ (FileLocator seaguller / 'downloads') ensureCreateDirectory
+]
+
 { #category : 'operations' }
 SeagullLocation >> doDownloadAction [
 
@@ -199,12 +212,23 @@ SeagullLocation >> downloadButtonIcon [
 ]
 
 { #category : 'accessing' }
+SeagullLocation >> downloadDirectory [
+
+	^ downloadDirectory ifNil: [ self defaultDownloadDirectory ]
+]
+
+{ #category : 'accessing' }
+SeagullLocation >> downloadDirectory: aFileReference [
+
+	downloadDirectory := aFileReference
+]
+
+{ #category : 'accessing' }
 SeagullLocation >> downloadFileReferenceDo: aBlock [
 
 	| ref |
 	(name notNil and: [ name notEmpty ]) ifFalse: [ ^ self ].
-	ref := (FileLocator seaguller / 'downloads') ensureCreateDirectory
-	       / name asFileName.
+	ref := self downloadDirectory / name asFileName.
 	self url lastPathSegment ifNotNil: [ :basename |
 		ref := ref withExtension: basename asFileReference extension ].
 	aBlock value: ref
@@ -504,7 +528,7 @@ SeagullLocation >> updateButtonIcon [
 { #category : 'accessing' }
 SeagullLocation >> url [
 
-	^ httpClient url
+	^ httpClient request url
 ]
 
 { #category : 'accessing' }

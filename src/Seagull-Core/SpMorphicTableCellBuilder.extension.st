@@ -9,7 +9,7 @@ SpMorphicTableCellBuilder >> visitSeagullButtonColumn: aTableColumn [
 		             icon: (aTableColumn readObject: self item);
 		             yourself.
 	aTableColumn action ifNotNil: [ :valuable |
-		presenter action: (valuable value: self item) ].
+		presenter action: [valuable value: self item] ].
 	morph := presenter build.
 	presenter adapter applyStyle: morph.
 	self addCellMorph: morph column: aTableColumn

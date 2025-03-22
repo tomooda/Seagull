@@ -9,6 +9,21 @@ Class {
 	#tag : 'UI'
 }
 
+{ #category : 'examples' }
+Seagull class >> example [
+
+	^ self new
+		  locations: {
+				  (SeagullDownloadLocation
+					   name: 'Example'
+					   url: 'https://example.com/').
+				  (SeagullDownloadLocation
+					   name: 'ViennaTalk-dev'
+					   url:
+						   'https://viennatalk.org/builds/viennatalk/dev/ViennaTalk-Installer-Darwin-arm64.dmg') };
+		  open
+]
+
 { #category : 'instance creation' }
 Seagull class >> open [
 
@@ -42,15 +57,16 @@ Seagull >> initializePresenters [
 
 	super initializePresenters.
 	locationList := self newTable
+		                beResizable;
 		                addColumn: ((SpImageTableColumn
 				                  title: ''
-				                  evaluated: [ :location | location icon ])
-				                 width: 20;
+				                  evaluated: [ :location | location statusIcon ])
+				                 beNotExpandable;
 				                 yourself);
 		                addColumn: ((SpStringTableColumn
 				                  title: 'name'
 				                  evaluated: [ :location | location name ])
-				                 width: 200;
+				                 beExpandable;
 				                 yourself);
 		                addColumn: ((SpStringTableColumn
 				                  title: 'url'
@@ -58,7 +74,7 @@ Seagull >> initializePresenters [
 				                 beExpandable;
 				                 yourself);
 		                addColumn: ((SpStringTableColumn
-				                  title: 'interval'
+				                  title: ''
 				                  evaluated: [ :location | location interval ])
 				                 width: 100;
 				                 yourself);
@@ -66,19 +82,19 @@ Seagull >> initializePresenters [
 				                  title: ''
 				                  evaluated: [ :item | item updateButtonIcon ])
 				                 action: [ :item | item doUpdateAction ];
-				                 width: 20;
+				                 beNotExpandable;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
 				                  evaluated: [ :item | item downloadButtonIcon ])
 				                 action: [ :item | item doDownloadAction ];
-				                 width: 20;
+				                 beNotExpandable;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
 				                  evaluated: [ :item | item openButtonIcon ])
 				                 action: [ :item | item doOpenAction ];
-				                 width: 20;
+				                 beNotExpandable;
 				                 yourself);
 		                yourself
 ]
@@ -102,6 +118,18 @@ Seagull >> loadSettings [
 				 do: [ :ex |
 					 self alert: 'Failed to load settings.'.
 					 ex return: nil ]) ifNotNil: [ :json | self setJSON: json ] ] ]
+]
+
+{ #category : 'accessing' }
+Seagull >> locations [
+
+	^ locationList items
+]
+
+{ #category : 'accessing' }
+Seagull >> locations: aCollectionOfSeagullLocation [
+
+	locationList items: aCollectionOfSeagullLocation asArray
 ]
 
 { #category : 'operations-settings' }
