@@ -4,6 +4,7 @@ Class {
 	#instVars : [
 		'name',
 		'interval',
+		'downloadDirectory',
 		'lastModifiedTimeOnServer',
 		'lastAccessTime',
 		'lastOpenTime',
@@ -11,7 +12,7 @@ Class {
 		'isDownloading',
 		'lock',
 		'httpClient',
-		'downloadDirectory'
+		'announcer'
 	],
 	#classVars : [
 		'DownloadingIcon',
@@ -138,6 +139,48 @@ SeagullLocation class >> readyToUpdateIcon [
 		  ReadyToUpdateIcon := self iconNamed: #refreshCircling ]
 ]
 
+{ #category : 'announcing' }
+SeagullLocation >> announce: aSeagullAnnouncement [
+
+	self announcer announce: aSeagullAnnouncement
+]
+
+{ #category : 'announcing' }
+SeagullLocation >> announceEndDownloading [
+
+	^ self announce: (SeagullLocationEndDownloading on: self)
+]
+
+{ #category : 'announcing' }
+SeagullLocation >> announceModificationOnServer [
+
+	^ self announce: (SeagullLocationModifiedOnServer on: self)
+]
+
+{ #category : 'announcing' }
+SeagullLocation >> announceSettingsChanged [
+
+	^ self announce: (SeagullLocationSettingsChanged on: self)
+]
+
+{ #category : 'announcing' }
+SeagullLocation >> announceStartDownloading [
+
+	^ self announce: (SeagullLocationStartDownloading on: self)
+]
+
+{ #category : 'announcing' }
+SeagullLocation >> announceStatusChanged [
+
+	^ self announce: (SeagullLocationStatusChanged on: self)
+]
+
+{ #category : 'announcing' }
+SeagullLocation >> announcer [
+
+	^ announcer ifNil: [ announcer := Announcer new ]
+]
+
 { #category : 'converting' }
 SeagullLocation >> asJSON [
 
@@ -155,7 +198,7 @@ SeagullLocation >> asJSON [
 { #category : 'accessing' }
 SeagullLocation >> defaultDownloadDirectory [
 
-	^ (FileLocator seaguller / 'downloads') ensureCreateDirectory
+	^ (FileLocator seagullHome / 'downloads') ensureCreateDirectory
 ]
 
 { #category : 'operations' }
@@ -185,6 +228,7 @@ SeagullLocation >> doUpdateAction [
 { #category : 'operations' }
 SeagullLocation >> download [
 
+	[
 	^ self downloadFileReferenceDo: [ :fileReference |
 		  self
 			  ifModifiedSince: self lastModifiedTimeOfDownloadFile
@@ -201,10 +245,14 @@ SeagullLocation >> download [
 							                              ifNotNil: [ :string |
 							                              ZnUtils parseHttpDate: string ]
 							                              ifNil: [ lastAccessTime ].
+						  self announceStartDownloading.
 						  client downloadEntityTo: fileReference.
+						  self announceEndDownloading.
+						  self announceModificationOnServer.
 						  ^ true ].
 					  response isNotModified ifTrue: [ ^ false ] ].
-				  SeagullDeadUrl signal ] ]
+				  SeagullDeadUrl signal ] ] ] ensure: [
+		self announceStatusChanged ]
 ]
 
 { #category : 'icons' }
@@ -247,6 +295,7 @@ SeagullLocation >> downloadingIcon [
 { #category : 'operations' }
 SeagullLocation >> fetch [
 
+	[
 	^ self
 		  ifModifiedSince: self lastModifiedTimeOnServer
 		  httpClientDo: [ :client |
@@ -264,7 +313,7 @@ SeagullLocation >> fetch [
 						                              ifNil: [ lastAccessTime ].
 					  ^ true ].
 				  response isNotModified ifTrue: [ ^ false ] ].
-			  SeagullDeadUrl signal ]
+			  SeagullDeadUrl signal ] ] ensure: [ self announceStatusChanged ]
 ]
 
 { #category : 'accessing' }
