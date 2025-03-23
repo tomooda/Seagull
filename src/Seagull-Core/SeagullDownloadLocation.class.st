@@ -6,12 +6,10 @@ Class {
 	#tag : 'Locations'
 }
 
-{ #category : 'converting' }
-SeagullDownloadLocation >> asJSON [
+{ #category : 'accessing' }
+SeagullDownloadLocation class >> type [
 
-	^ super asJSON
-		  at: 'type' put: 'download';
-		  yourself
+	^ 'manual download'
 ]
 
 { #category : 'operations' }

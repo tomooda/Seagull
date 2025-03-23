@@ -112,7 +112,8 @@ Seagull >> initializePresenters [
 			                oldLocations do: [ :location |
 				                self unregister: location ].
 			                newLocatons do: [ :location |
-				                self register: location ] ];
+				                self register: location ].
+			                self saveSettings ];
 		                yourself.
 	refreshLocationListButton := self newButton
 		                             icon:
@@ -156,6 +157,7 @@ Seagull >> locationEndedDownloading: aSeagullLocation [
 { #category : 'updating' }
 Seagull >> locationSettingsChanged: aSeagullLocation [
 
+	self saveSettings.
 	locationList refresh
 ]
 
@@ -168,6 +170,7 @@ Seagull >> locationStartedDownloading: aSeagullLocation [
 { #category : 'updating' }
 Seagull >> locationStatusChanged: aSeagullLocation [
 
+	self saveSettings.
 	locationList refresh
 ]
 
@@ -237,7 +240,7 @@ Seagull >> saveSettings [
 { #category : 'private' }
 Seagull >> setJSON: aDictionary [
 
-	aDictionary at: 'location' ifPresent: [ :locations |
+	aDictionary at: 'locations' ifPresent: [ :locations |
 		locationList items: (locations collect: [ :location |
 				 SeagullLocation fromJSON: location ]) ]
 ]

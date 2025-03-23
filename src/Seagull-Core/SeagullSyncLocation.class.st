@@ -6,10 +6,8 @@ Class {
 	#tag : 'Locations'
 }
 
-{ #category : 'converting' }
-SeagullSyncLocation >> asJSON [
+{ #category : 'accessing' }
+SeagullSyncLocation class >> type [
 
-	^ super asJSON
-		  at: 'type' put: 'sync';
-		  yourself
+	^ 'sync'
 ]

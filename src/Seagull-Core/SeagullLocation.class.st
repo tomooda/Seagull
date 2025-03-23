@@ -28,6 +28,21 @@ Class {
 	#tag : 'Locations'
 }
 
+{ #category : 'testing' }
+SeagullLocation class >> accepts: aDictionary [
+
+	^ (aDictionary at: 'type' ifAbsent: [ nil ]) = self type
+]
+
+{ #category : 'private' }
+SeagullLocation class >> classFor: aDictionary [
+
+	^ self allSubclasses
+		  detect: [ :class |
+		  class isAbstract not and: [ class accepts: aDictionary ] ]
+		  ifNone: [ self error: 'No class can handle the given JSON' ]
+]
+
 { #category : 'icons' }
 SeagullLocation class >> downloadingIcon [
 
@@ -54,7 +69,7 @@ SeagullLocation class >> example [
 { #category : 'instance creation' }
 SeagullLocation class >> fromJSON: aDictionary [
 
-	^ self new
+	^ (self classFor: aDictionary) new
 		  setJSON: aDictionary;
 		  yourself
 ]
@@ -139,6 +154,12 @@ SeagullLocation class >> readyToUpdateIcon [
 		  ReadyToUpdateIcon := self iconNamed: #refreshCircling ]
 ]
 
+{ #category : 'accessing' }
+SeagullLocation class >> type [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'announcing' }
 SeagullLocation >> announce: aSeagullAnnouncement [
 
@@ -184,14 +205,16 @@ SeagullLocation >> announcer [
 { #category : 'converting' }
 SeagullLocation >> asJSON [
 
-	^ Dictionary new
-		  at: 'name' put: self name asString;
-		  at: 'url' put: self url asString;
-		  at: 'interval' put: self interval asString;
+	^ OrderedDictionary new
+		  at: 'type' put: self class type;
+		  at: 'name' put: (self name ifNotNil: #asString);
+		  at: 'url' put: (self url ifNotNil: #asString);
+		  at: 'interval' put: (self interval ifNotNil: #asString);
 		  at: 'lastModifiedTimeOnServer'
-		  put: self lastModifiedTimeOnServer asString;
-		  at: 'lastAccessTime' put: self lastAccessTime asString;
-		  at: 'hasDeadUrl' put: self hasDeadUrl;
+		  put: (self lastModifiedTimeOnServer ifNotNil: #asString);
+		  at: 'lastAccessTime'
+		  put: (self lastAccessTime ifNotNil: #asString);
+		  at: 'hasDeadUrl' put: (self ifNotNil: #hasDeadUrl);
 		  yourself
 ]
 
@@ -231,13 +254,14 @@ SeagullLocation >> download [
 	[
 	^ self downloadFileReferenceDo: [ :fileReference |
 		  self
-			  ifModifiedSince: self lastModifiedTimeOfDownloadFile
+			  ifModifiedSince: self lastModifiedTimeOnServer
 			  httpClientDo: [ :client |
 				  client
 					  streaming: true;
 					  get.
 				  lastAccessTime := DateAndTime now.
 				  client response ifNotNil: [ :response |
+					  response isNotModified ifTrue: [ ^ false ].
 					  response isSuccess ifTrue: [
 						  lastModifiedTimeOnServer := (response headers
 							                               at: 'Last-Modified'
@@ -251,8 +275,7 @@ SeagullLocation >> download [
 						  isDownloading := false.
 						  self announceEndDownloading.
 						  self announceModificationOnServer.
-						  ^ true ].
-					  response isNotModified ifTrue: [ ^ false ] ].
+						  ^ true ] ].
 				  SeagullDeadUrl signal ] ] ] ensure: [
 		self announceStatusChanged ]
 ]
@@ -394,9 +417,9 @@ SeagullLocation >> ifModifiedSince: aDateAndTimeOrNil httpClientDo: aBlock [
 					  removeKey: 'If-Modified-Since'
 					  ifAbsent: [  ] ].
 		  [
-		  aBlock value: httpClient.
-		  hasDeadUrl := false ]
-			  on: Exception
+		  hasDeadUrl := false.
+		  aBlock value: httpClient ]
+			  on: Error
 			  do: [ :ex |
 				  hasDeadUrl := true.
 				  ex return: nil ] ]
