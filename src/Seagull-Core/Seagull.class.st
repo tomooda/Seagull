@@ -2,7 +2,9 @@ Class {
 	#name : 'Seagull',
 	#superclass : 'SpPresenter',
 	#instVars : [
-		'locationList'
+		'locationList',
+		'openDownloadsButton',
+		'refreshLocationListButton'
 	],
 	#category : 'Seagull-Core-UI',
 	#package : 'Seagull-Core',
@@ -42,7 +44,20 @@ Seagull >> asJSON [
 { #category : 'layout' }
 Seagull >> defaultLayout [
 
-	^ SpBoxLayout newVertical add: locationList
+	^ SpBoxLayout newVertical
+		  add: locationList;
+		  add: (SpBoxLayout newHorizontal
+				   add: refreshLocationListButton expand: false;
+				   add: openDownloadsButton expand: false;
+				   yourself)
+		  expand: false;
+		  yourself
+]
+
+{ #category : 'accessing' }
+Seagull >> downloadDirectory [
+
+	^ FileLocator seagullHome / 'Downloads'
 ]
 
 { #category : 'initialization' }
@@ -69,11 +84,6 @@ Seagull >> initializePresenters [
 				                 beExpandable;
 				                 yourself);
 		                addColumn: ((SpStringTableColumn
-				                  title: 'url'
-				                  evaluated: [ :location | location url ])
-				                 beExpandable;
-				                 yourself);
-		                addColumn: ((SpStringTableColumn
 				                  title: ''
 				                  evaluated: [ :location | location interval ])
 				                 width: 100;
@@ -87,7 +97,9 @@ Seagull >> initializePresenters [
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
 				                  evaluated: [ :item | item downloadButtonIcon ])
-				                 action: [ :item | item doDownloadAction ];
+				                 action: [ :item |
+					                 [ item doDownloadAction ] forkAt:
+							                 Processor userBackgroundPriority ];
 				                 beNotExpandable;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
@@ -101,7 +113,17 @@ Seagull >> initializePresenters [
 				                self unregister: location ].
 			                newLocatons do: [ :location |
 				                self register: location ] ];
-		                yourself
+		                yourself.
+	refreshLocationListButton := self newButton
+		                             icon:
+			                             (self iconNamed: #refreshCircling);
+		                             action: [ self refreshLocations ];
+		                             yourself.
+	openDownloadsButton := self newButton
+		                       icon: (self iconNamed: #open);
+		                       label: 'Downloads';
+		                       action: [ self openDownloads ];
+		                       yourself
 ]
 
 { #category : 'initialization' }
@@ -128,7 +150,7 @@ Seagull >> loadSettings [
 { #category : 'updating' }
 Seagull >> locationEndedDownloading: aSeagullLocation [
 
-	
+	locationList refresh
 ]
 
 { #category : 'updating' }
@@ -140,7 +162,7 @@ Seagull >> locationSettingsChanged: aSeagullLocation [
 { #category : 'updating' }
 Seagull >> locationStartedDownloading: aSeagullLocation [
 
-	
+	locationList refresh
 ]
 
 { #category : 'updating' }
@@ -159,6 +181,18 @@ Seagull >> locations [
 Seagull >> locations: aCollectionOfSeagullLocation [
 
 	locationList items: aCollectionOfSeagullLocation asArray
+]
+
+{ #category : 'operations' }
+Seagull >> openDownloads [
+
+	SeagullOSUtils openFile: self downloadDirectory
+]
+
+{ #category : 'operations' }
+Seagull >> refreshLocations [
+
+	locationList refresh
 ]
 
 { #category : 'registration' }

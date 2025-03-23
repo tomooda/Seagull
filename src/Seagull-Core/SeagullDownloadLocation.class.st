@@ -42,6 +42,7 @@ SeagullDownloadLocation >> doUpdateAction [
 SeagullDownloadLocation >> readyToDownload [
 
 	| remote local |
+	self isDownloading ifTrue: [ ^ false ].
 	remote := self lastModifiedTimeOnServer.
 	local := self lastModifiedTimeOfDownloadFile.
 	remote isNil ifTrue: [ ^ false ].
@@ -53,6 +54,7 @@ SeagullDownloadLocation >> readyToDownload [
 SeagullDownloadLocation >> readyToOpen [
 
 	| local view |
+	self isDownloading ifTrue: [ ^ false ].
 	local := self lastModifiedTimeOfDownloadFile.
 	view := self lastOpenTime.
 	local isNil ifTrue: [ ^ false ].
@@ -64,6 +66,7 @@ SeagullDownloadLocation >> readyToOpen [
 SeagullDownloadLocation >> readyToUpdate [
 
 	| remote local |
+	self isDownloading ifTrue: [ ^ false ].
 	remote := self lastModifiedTimeOnServer.
 	local := self lastModifiedTimeOfDownloadFile.
 	remote isNil ifTrue: [ ^ true ].

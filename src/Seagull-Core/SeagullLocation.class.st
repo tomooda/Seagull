@@ -245,8 +245,10 @@ SeagullLocation >> download [
 							                              ifNotNil: [ :string |
 							                              ZnUtils parseHttpDate: string ]
 							                              ifNil: [ lastAccessTime ].
+						  isDownloading := true.
 						  self announceStartDownloading.
-						  client downloadEntityTo: fileReference.
+						  client downloadEntityTo: fileReference ensureDelete.
+						  isDownloading := false.
 						  self announceEndDownloading.
 						  self announceModificationOnServer.
 						  ^ true ].
@@ -391,7 +393,9 @@ SeagullLocation >> ifModifiedSince: aDateAndTimeOrNil httpClientDo: aBlock [
 				  httpClient request headers
 					  removeKey: 'If-Modified-Since'
 					  ifAbsent: [  ] ].
-		  [ aBlock value: httpClient ]
+		  [
+		  aBlock value: httpClient.
+		  hasDeadUrl := false ]
 			  on: Exception
 			  do: [ :ex |
 				  hasDeadUrl := true.
@@ -495,29 +499,15 @@ SeagullLocation >> openButtonIcon [
 SeagullLocation >> openFile [
 
 	self isDownloading ifFalse: [
-		OSPlatform current isMacOSX ifTrue: [ self openFileMacOS ] ]
-]
-
-{ #category : 'platform dependents' }
-SeagullLocation >> openFileMacOS [
-
-	self downloadFileReferenceDo: [ :ref |
-		LibC system:
-			('open ' , (self shellEscape: ref pathString)) asUTF8Bytes.
-		lastOpenTime := DateAndTime now ]
+		self downloadFileReferenceDo: [ :ref |
+			SeagullOSUtils openFile: ref.
+			lastOpenTime := DateAndTime now ] ]
 ]
 
 { #category : 'operations' }
 SeagullLocation >> openUrl [
 
-	OSPlatform current isMacOSX ifTrue: [ self openUrlMacOS ]
-]
-
-{ #category : 'platform dependents' }
-SeagullLocation >> openUrlMacOS [
-
-	LibC system:
-		('open ' , (self shellEscape: self url asString)) asUTF8Bytes.
+	SeagullOSUtils openUrl: self url.
 	lastOpenTime := DateAndTime now
 ]
 
