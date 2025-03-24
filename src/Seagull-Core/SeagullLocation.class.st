@@ -207,6 +207,15 @@ SeagullLocation >> asPresenter [
 	^ SeagullLocationPresenter on: self
 ]
 
+{ #category : 'accessing' }
+SeagullLocation >> backgroundColor [
+
+	self hasDeadUrl ifTrue: [ ^ Color lightGray ].
+	self isDownloading ifTrue: [ ^ Color yellow muchLighter ].
+	self readyToOpen ifTrue: [ ^ Color cyan mixed: 0.2 with: Color white ].
+	^ Color white
+]
+
 { #category : 'operations' }
 SeagullLocation >> beManualDownload [
 
@@ -226,6 +235,20 @@ SeagullLocation >> beSync [
 
 	policy := SeagullSyncPolicy on: self.
 	self announceSettingsChanged
+]
+
+{ #category : 'operations' }
+SeagullLocation >> clearTimestampAndFile [
+
+	lastModifiedTimeOnServer := lastAccessTime := lastOpenTime := etag := nil.
+	hasDeadUrl := false.
+	self announceStatusChanged
+]
+
+{ #category : 'accessing' }
+SeagullLocation >> color [
+
+	^ Color black
 ]
 
 { #category : 'initialization' }

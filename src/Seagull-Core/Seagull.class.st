@@ -70,6 +70,15 @@ Seagull >> asJSON [
 		  yourself
 ]
 
+{ #category : 'bugfix' }
+Seagull >> confirm: queryString label: titleString [
+
+	^ self application newConfirm
+		  title: titleString;
+		  label: queryString;
+		  openModal
+]
+
 { #category : 'layout' }
 Seagull >> defaultLayout [
 
@@ -127,6 +136,9 @@ Seagull >> initializePresenters [
 		                addColumn: ((SpStringTableColumn
 				                  title: 'name'
 				                  evaluated: [ :location | location name ])
+				                 displayColor: [ :location | location color ];
+				                 displayBackgroundColor: [ :location |
+					                 location backgroundColor ];
 				                 beExpandable;
 				                 yourself);
 		                addColumn: ((SpStringTableColumn
@@ -239,6 +251,15 @@ Seagull >> locationMenuFor: aSeagullLocation [
 						  icon: (self iconNamed: #configuration);
 						  name: 'Configure...';
 						  action: [ self editLocation: aSeagullLocation ] ];
+				  addItem: [ :item |
+					  item
+						  icon: (self iconNamed: #delete);
+						  name: 'Clear';
+						  action: [
+							  (self
+								   confirm: 'Clear all cache and download file?'
+								   label: 'Seagull') ifTrue: [
+									  aSeagullLocation clearTimestampAndFile ] ] ];
 				  addItem: [ :item |
 					  item
 						  icon: (self iconNamed: #remove);
