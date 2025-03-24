@@ -3,11 +3,13 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'name',
+		'policy',
 		'interval',
 		'downloadDirectory',
 		'lastModifiedTimeOnServer',
 		'lastAccessTime',
 		'lastOpenTime',
+		'etag',
 		'hasDeadUrl',
 		'isDownloading',
 		'lock',
@@ -27,21 +29,6 @@ Class {
 	#package : 'Seagull-Core',
 	#tag : 'Locations'
 }
-
-{ #category : 'testing' }
-SeagullLocation class >> accepts: aDictionary [
-
-	^ (aDictionary at: 'type' ifAbsent: [ nil ]) = self type
-]
-
-{ #category : 'private' }
-SeagullLocation class >> classFor: aDictionary [
-
-	^ self allSubclasses
-		  detect: [ :class |
-		  class isAbstract not and: [ class accepts: aDictionary ] ]
-		  ifNone: [ self error: 'No class can handle the given JSON' ]
-]
 
 { #category : 'icons' }
 SeagullLocation class >> downloadingIcon [
@@ -69,15 +56,9 @@ SeagullLocation class >> example [
 { #category : 'instance creation' }
 SeagullLocation class >> fromJSON: aDictionary [
 
-	^ (self classFor: aDictionary) new
+	^ self new
 		  setJSON: aDictionary;
 		  yourself
-]
-
-{ #category : 'testing' }
-SeagullLocation class >> isAbstract [
-
-	^ self = SeagullLocation
 ]
 
 { #category : 'instance creation' }
@@ -154,10 +135,13 @@ SeagullLocation class >> readyToUpdateIcon [
 		  ReadyToUpdateIcon := self iconNamed: #refreshCircling ]
 ]
 
-{ #category : 'accessing' }
-SeagullLocation class >> type [
+{ #category : 'icons' }
+SeagullLocation >> actionButtonIcon [
 
-	^ self subclassResponsibility
+	self readyToOpen ifTrue: [ ^ self openButtonIcon ].
+	self readyToDownload ifTrue: [ ^ self downloadButtonIcon ].
+	self readyToUpdate ifTrue: [ ^ self updateButtonIcon ].
+	^ self iconNamed: #empty
 ]
 
 { #category : 'announcing' }
@@ -206,46 +190,94 @@ SeagullLocation >> announcer [
 SeagullLocation >> asJSON [
 
 	^ OrderedDictionary new
-		  at: 'type' put: self class type;
 		  at: 'name' put: (self name ifNotNil: #asString);
 		  at: 'url' put: (self url ifNotNil: #asString);
+		  at: 'policy' put: self policyName;
 		  at: 'interval' put: (self interval ifNotNil: #asString);
 		  at: 'lastModifiedTimeOnServer'
 		  put: (self lastModifiedTimeOnServer ifNotNil: #asString);
 		  at: 'lastAccessTime'
 		  put: (self lastAccessTime ifNotNil: #asString);
+		  at: 'lastOpenTime' put: (self lastOpenTime ifNotNil: #asString);
 		  at: 'hasDeadUrl' put: (self ifNotNil: #hasDeadUrl);
 		  yourself
 ]
 
-{ #category : 'accessing' }
+{ #category : 'converting' }
+SeagullLocation >> asPresenter [
+
+	^ SeagullLocationPresenter on: self
+]
+
+{ #category : 'operations' }
+SeagullLocation >> beManualDownload [
+
+	policy := SeagullManualDownloadPolicy on: self.
+	self announceSettingsChanged
+]
+
+{ #category : 'operations' }
+SeagullLocation >> beNoDownload [
+
+	policy := SeagullNoDownloadPolicy on: self.
+	self announceSettingsChanged
+]
+
+{ #category : 'operations' }
+SeagullLocation >> beSync [
+
+	policy := SeagullSyncPolicy on: self.
+	self announceSettingsChanged
+]
+
+{ #category : 'initialization' }
 SeagullLocation >> defaultDownloadDirectory [
 
 	^ (FileLocator seagullHome / 'downloads') ensureCreateDirectory
 ]
 
+{ #category : 'initialization' }
+SeagullLocation >> defaultInterval [
+
+	^ 1 day
+]
+
+{ #category : 'initialization' }
+SeagullLocation >> defaultPolicyClass [
+
+	^ SeagullManualDownloadPolicy
+]
+
+{ #category : 'icons' }
+SeagullLocation >> doAction [
+
+	self readyToOpen ifTrue: [ ^ self doOpenAction ].
+	self readyToDownload ifTrue: [ ^ self doDownloadAction ].
+	self readyToUpdate ifTrue: [ ^ self doUpdateAction ]
+]
+
 { #category : 'operations' }
 SeagullLocation >> doDownloadAction [
 
-	^ self subclassResponsibility
+	[ policy doDownloadAction ] forkAt: Processor userBackgroundPriority
 ]
 
 { #category : 'operations' }
 SeagullLocation >> doOpenAction [
 
-	^ self subclassResponsibility
+	[ policy doOpenAction ] forkAt: Processor userBackgroundPriority
 ]
 
 { #category : 'operations' }
 SeagullLocation >> doPollingAction [
 
-	^ self subclassResponsibility
+	policy doPollingAction
 ]
 
 { #category : 'operations' }
 SeagullLocation >> doUpdateAction [
 
-	^ self subclassResponsibility
+	[ policy doUpdateAction ] forkAt: Processor userBackgroundPriority
 ]
 
 { #category : 'operations' }
@@ -254,7 +286,8 @@ SeagullLocation >> download [
 	[
 	^ self downloadFileReferenceDo: [ :fileReference |
 		  self
-			  ifModifiedSince: self lastModifiedTimeOnServer
+			  ifModifiedSince: self lastModifiedTimeOfDownloadFile
+			  etag: etag
 			  httpClientDo: [ :client |
 				  client
 					  streaming: true;
@@ -269,6 +302,7 @@ SeagullLocation >> download [
 							                              ifNotNil: [ :string |
 							                              ZnUtils parseHttpDate: string ]
 							                              ifNil: [ lastAccessTime ].
+						  etag := response headers at: 'Etag' ifAbsent: [ nil ].
 						  isDownloading := true.
 						  self announceStartDownloading.
 						  client downloadEntityTo: fileReference ensureDelete.
@@ -307,7 +341,8 @@ SeagullLocation >> downloadFileReferenceDo: aBlock [
 	(name notNil and: [ name notEmpty ]) ifFalse: [ ^ self ].
 	ref := self downloadDirectory / name asFileName.
 	self url lastPathSegment ifNotNil: [ :basename |
-		ref := ref withExtension: basename asFileReference extension ].
+		basename isString ifTrue: [
+			ref := ref withExtension: basename asFileReference extension ] ].
 	aBlock value: ref
 ]
 
@@ -318,11 +353,23 @@ SeagullLocation >> downloadingIcon [
 ]
 
 { #category : 'operations' }
+SeagullLocation >> edit [
+
+	| presenter |
+	presenter := self asPresenter.
+	presenter openDialog okAction: [
+		presenter accept.
+		self announceSettingsChanged ]
+]
+
+{ #category : 'operations' }
 SeagullLocation >> fetch [
 
 	[
 	^ self
-		  ifModifiedSince: self lastModifiedTimeOnServer
+		  ifModifiedSince: (self lastModifiedTimeOfDownloadFile ifNil: [
+				   self lastModifiedTimeOnServer ])
+		  etag: etag
 		  httpClientDo: [ :client |
 			  client
 				  streaming: false;
@@ -396,7 +443,7 @@ SeagullLocation >> hasUpdatesOnServerToOpen [
 { #category : 'http' }
 SeagullLocation >> httpClientDo: aBlock [
 
-	^ self ifModifiedSince: nil httpClientDo: aBlock
+	^ self ifModifiedSince: nil etag: nil httpClientDo: aBlock
 ]
 
 { #category : 'icons' }
@@ -407,15 +454,27 @@ SeagullLocation >> iconNamed: aSymbol [
 ]
 
 { #category : 'http' }
-SeagullLocation >> ifModifiedSince: aDateAndTimeOrNil httpClientDo: aBlock [
+SeagullLocation >> ifModifiedSince: aDateAndTimeOrNil etag: aString httpClientDo: aBlock [
 
 	^ lock critical: [
-		  aDateAndTimeOrNil
-			  ifNotNil: [ httpClient setIfModifiedSince: aDateAndTimeOrNil ]
-			  ifNil: [
+		  aString
+			  ifNotNil: [
+				  httpClient request headers
+					  at: 'If-None-Match'
+					  put: aString asString.
 				  httpClient request headers
 					  removeKey: 'If-Modified-Since'
-					  ifAbsent: [  ] ].
+					  ifAbsent: [  ] ]
+			  ifNil: [
+				  httpClient request headers
+					  removeKey: 'If-None-Match'
+					  ifAbsent: [  ].
+				  aDateAndTimeOrNil
+					  ifNotNil: [ httpClient setIfModifiedSince: aDateAndTimeOrNil ]
+					  ifNil: [
+						  httpClient request headers
+							  removeKey: 'If-Modified-Since'
+							  ifAbsent: [  ] ] ].
 		  [
 		  hasDeadUrl := false.
 		  aBlock value: httpClient ]
@@ -429,11 +488,15 @@ SeagullLocation >> ifModifiedSince: aDateAndTimeOrNil httpClientDo: aBlock [
 SeagullLocation >> initialize [
 
 	super initialize.
-	name := String new.
+	name := ''.
+	policy := self defaultPolicyClass on: self.
+	interval := self defaultInterval.
+	downloadDirectory := self defaultDownloadDirectory.
 	hasDeadUrl := false.
 	isDownloading := false.
 	lock := Semaphore forMutualExclusion.
-	httpClient := ZnClient new
+	httpClient := ZnClient new.
+	announcer := Announcer new
 ]
 
 { #category : 'accessing' }
@@ -524,41 +587,68 @@ SeagullLocation >> openFile [
 	self isDownloading ifFalse: [
 		self downloadFileReferenceDo: [ :ref |
 			SeagullOSUtils openFile: ref.
-			lastOpenTime := DateAndTime now ] ]
+			lastOpenTime := DateAndTime now.
+			self announceStatusChanged ] ]
 ]
 
 { #category : 'operations' }
 SeagullLocation >> openUrl [
 
+	[
+	self ifModifiedSince: nil etag: etag httpClientDo: [ :client |
+		client
+			streaming: false;
+			head.
+		lastAccessTime := DateAndTime now.
+		lastModifiedTimeOnServer := (client response headers
+			                             at: 'Last-Modified'
+			                             ifAbsent: [ nil ])
+			                            ifNotNil: [ :string |
+			                            ZnUtils parseHttpDate: string ]
+			                            ifNil: [ lastAccessTime ].
+		etag := client response headers at: 'Etag' ifAbsent: [ nil ] ].
 	SeagullOSUtils openUrl: self url.
-	lastOpenTime := DateAndTime now
+	lastOpenTime := DateAndTime now ] ensure: [
+		self announceStatusChanged ]
+]
+
+{ #category : 'accessing' }
+SeagullLocation >> policyName [
+
+	^ policy policyName
+]
+
+{ #category : 'accessing' }
+SeagullLocation >> policyName: aString [
+
+	(SeagullLocationPolicy policyName: aString on: self) ifNotNil: [ :p |
+		policy := p ]
 ]
 
 { #category : 'operations' }
 SeagullLocation >> poll [
 
 	(interval notNil and: [
-		 lastAccessTime isNil or: [
-			 interval < (DateAndTime now - lastAccessTime) ] ]) ifTrue: [
+		 lastAccessTime isNil or: [ self timeToPoll negative ] ]) ifTrue: [
 		self doPollingAction ]
 ]
 
 { #category : 'testing' }
 SeagullLocation >> readyToDownload [
 
-	^ self subclassResponsibility
+	^ self isDownloading not and: [ policy readyToDownload ]
 ]
 
 { #category : 'testing' }
 SeagullLocation >> readyToOpen [
 
-	^ self subclassResponsibility
+	^ self isDownloading not and: [ policy readyToOpen ]
 ]
 
 { #category : 'testing' }
 SeagullLocation >> readyToUpdate [
 
-	^ self subclassResponsibility
+	^ self isDownloading not and: [ policy readyToUpdate ]
 ]
 
 { #category : 'private' }
@@ -567,6 +657,7 @@ SeagullLocation >> setJSON: aDictionary [
 	aDictionary
 		at: 'name' ifPresent: [ :string | self name: string ];
 		at: 'url' ifPresent: [ :string | self url: string asZnUrl ];
+		at: 'policy' ifPresent: [ :string | self policyName: string ];
 		at: 'interval'
 		ifPresent: [ :stringOrNil |
 			self interval: (stringOrNil ifNotNil: #asDuration) ];
@@ -575,6 +666,9 @@ SeagullLocation >> setJSON: aDictionary [
 		at: 'lastAccessTime'
 		ifPresent: [ :string |
 			self lastAccessTime: (string ifNotNil: #asDateAndTime) ];
+		at: 'lastOpenTime'
+		ifPresent: [ :string |
+			self lastOpenTime: (string ifNotNil: #asDateAndTime) ];
 		at: 'hasDeadUrl'
 		ifPresent: [ :bool | self hasDeadUrl: bool = true ]
 ]
@@ -592,6 +686,14 @@ SeagullLocation >> statusIcon [
 	self isDownloading ifTrue: [ ^ self iconNamed: #downloading ].
 	self hasDownloadFile ifTrue: [ ^ self iconNamed: #box ].
 	^ self iconNamed: #empty
+]
+
+{ #category : 'accessing' }
+SeagullLocation >> timeToPoll [
+
+	^ lastAccessTime
+		  ifNotNil: [ interval - (DateAndTime now - lastAccessTime) ]
+		  ifNil: [ -1 second ]
 ]
 
 { #category : 'icons' }

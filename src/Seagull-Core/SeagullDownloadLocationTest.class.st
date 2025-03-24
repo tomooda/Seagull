@@ -9,5 +9,5 @@ Class {
 { #category : 'class access' }
 SeagullDownloadLocationTest >> locationClass [
 
-	^ SeagullDownloadLocation
+	^ SeagullLocation
 ]

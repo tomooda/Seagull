@@ -4,7 +4,10 @@ Class {
 	#instVars : [
 		'locationList',
 		'openDownloadsButton',
-		'refreshLocationListButton'
+		'refreshLocationListButton',
+		'moveUpLocationButton',
+		'moveDownLocationButton',
+		'addLocationButton'
 	],
 	#category : 'Seagull-Core-UI',
 	#package : 'Seagull-Core',
@@ -16,10 +19,8 @@ Seagull class >> example [
 
 	^ self new
 		  locations: {
-				  (SeagullDownloadLocation
-					   name: 'Example'
-					   url: 'https://example.com/').
-				  (SeagullDownloadLocation
+				  (SeagullLocation name: 'Example' url: 'https://example.com/').
+				  (SeagullLocation
 					   name: 'ViennaTalk-dev'
 					   url:
 						   'https://viennatalk.org/builds/viennatalk/dev/ViennaTalk-Installer-Darwin-arm64.dmg') };
@@ -31,6 +32,34 @@ Seagull class >> open [
 
 	<script>
 	^ self new open
+]
+
+{ #category : 'operations' }
+Seagull >> addLocation [
+
+	| newLocation presenter |
+	newLocation := SeagullLocation example.
+	presenter := newLocation asPresenter.
+	presenter nameValidationBlock: [ :name |
+		name notEmpty and: [
+			((locationList items collect: #name) includes: name) not ] ].
+	presenter openDialog okAction: [
+		presenter accept.
+		self addLocation: newLocation ]
+]
+
+{ #category : 'operations' }
+Seagull >> addLocation: aSeagullLocation [
+
+	| items index |
+	items := locationList items.
+	((items collect: #name) includes: aSeagullLocation name) ifTrue: [
+		^ self ].
+	index := locationList selection selectedIndex.
+	index = 0 ifTrue: [ index := items size + 1 ].
+	locationList items:
+		(items copyFrom: 1 to: index - 1) , { aSeagullLocation }
+		, (items copyFrom: index to: items size)
 ]
 
 { #category : 'converting' }
@@ -47,6 +76,10 @@ Seagull >> defaultLayout [
 	^ SpBoxLayout newVertical
 		  add: locationList;
 		  add: (SpBoxLayout newHorizontal
+				   add: addLocationButton expand: false;
+				   add: moveUpLocationButton expand: false;
+				   add: moveDownLocationButton expand: false;
+				   add: '   ' width: 80;
 				   add: refreshLocationListButton expand: false;
 				   add: openDownloadsButton expand: false;
 				   yourself)
@@ -58,6 +91,18 @@ Seagull >> defaultLayout [
 Seagull >> downloadDirectory [
 
 	^ FileLocator seagullHome / 'Downloads'
+]
+
+{ #category : 'operations' }
+Seagull >> editLocation: aSeagullLocation [
+
+	| presenter |
+	presenter := aSeagullLocation asPresenter.
+	presenter nameValidationBlock: [ :name |
+		name notEmpty and: [
+			(((locationList items copyWithout: aSeagullLocation) collect: #name)
+				 includes: name) not ] ].
+	presenter openDialog okAction: [ presenter accept ]
 ]
 
 { #category : 'initialization' }
@@ -73,6 +118,7 @@ Seagull >> initializePresenters [
 	super initializePresenters.
 	locationList := self newTable
 		                beResizable;
+		                hideColumnHeaders;
 		                addColumn: ((SpImageTableColumn
 				                  title: ''
 				                  evaluated: [ :location | location statusIcon ])
@@ -85,36 +131,44 @@ Seagull >> initializePresenters [
 				                 yourself);
 		                addColumn: ((SpStringTableColumn
 				                  title: ''
-				                  evaluated: [ :location | location interval ])
+				                  evaluated: [ :location |
+					                  location timeToPoll truncateTo: 1 second ])
 				                 width: 100;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
-				                  evaluated: [ :item | item updateButtonIcon ])
-				                 action: [ :item | item doUpdateAction ];
+				                  evaluated: [ :item | item actionButtonIcon ])
+				                 action: [ :item | item doAction ];
 				                 beNotExpandable;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
-				                  evaluated: [ :item | item downloadButtonIcon ])
-				                 action: [ :item |
-					                 [ item doDownloadAction ] forkAt:
-							                 Processor userBackgroundPriority ];
-				                 beNotExpandable;
-				                 yourself);
-		                addColumn: ((SeagullButtonTableColumn
-				                  title: ''
-				                  evaluated: [ :item | item openButtonIcon ])
-				                 action: [ :item | item doOpenAction ];
-				                 beNotExpandable;
+				                  evaluated: [ :item | self iconNamed: #dropDown ])
+				                 action: [ :item | self openLocationMenuFor: item ];
+				                 width: 20;
 				                 yourself);
 		                whenModelChangedDo: [ :newLocatons :oldLocations |
 			                oldLocations do: [ :location |
 				                self unregister: location ].
 			                newLocatons do: [ :location |
 				                self register: location ].
+			                self updateButtons.
 			                self saveSettings ];
+		                whenSelectedItemChangedDo: [ self updateButtons ];
 		                yourself.
+	addLocationButton := self newButton
+		                     icon: (self iconNamed: #add);
+		                     action: [ self addLocation ];
+		                     yourself.
+	moveUpLocationButton := self newButton
+		                        icon: (self iconNamed: #up);
+		                        action: [ self moveUpLocation ];
+		                        yourself.
+	moveDownLocationButton := self newButton
+		                          icon: (self iconNamed: #down);
+		                          action: [ self moveDownLocation ];
+		                          yourself.
+
 	refreshLocationListButton := self newButton
 		                             icon:
 			                             (self iconNamed: #refreshCircling);
@@ -124,7 +178,10 @@ Seagull >> initializePresenters [
 		                       icon: (self iconNamed: #open);
 		                       label: 'Downloads';
 		                       action: [ self openDownloads ];
-		                       yourself
+		                       yourself.
+	locationList whenBuiltDo: [
+		locationList withAdapterDo: [ :a |
+			a widgetDo: [ :w | w intercellSpacing: 0 @ 0 ] ] ]
 ]
 
 { #category : 'initialization' }
@@ -132,8 +189,8 @@ Seagull >> initializeWindow: aSpWindowPresenter [
 
 	super initializeWindow: aSpWindowPresenter.
 	aSpWindowPresenter
-		title: 'Seaguller';
-		initialExtent: 1024 @ 300
+		title: 'Seagull';
+		initialExtent: 600 @ 300
 ]
 
 { #category : 'operations-settings' }
@@ -152,6 +209,46 @@ Seagull >> loadSettings [
 Seagull >> locationEndedDownloading: aSeagullLocation [
 
 	locationList refresh
+]
+
+{ #category : 'menus' }
+Seagull >> locationMenuFor: aSeagullLocation [
+
+	^ self newMenu
+		  addGroup: [ :group |
+			  group
+				  addItem: [ :item |
+					  item
+						  icon: aSeagullLocation updateButtonIcon;
+						  name: 'Check';
+						  action: [ aSeagullLocation doUpdateAction ] ];
+				  addItem: [ :item |
+					  item
+						  icon: aSeagullLocation downloadButtonIcon;
+						  name: 'Download';
+						  action: [ aSeagullLocation doDownloadAction ] ];
+				  addItem: [ :item |
+					  item
+						  icon: aSeagullLocation openButtonIcon;
+						  name: 'Open';
+						  action: [ aSeagullLocation doOpenAction ] ] ];
+		  addGroup: [ :group |
+			  group
+				  addItem: [ :item |
+					  item
+						  icon: (self iconNamed: #configuration);
+						  name: 'Configure...';
+						  action: [ self editLocation: aSeagullLocation ] ];
+				  addItem: [ :item |
+					  item
+						  icon: (self iconNamed: #remove);
+						  name: 'Remove';
+						  action: [
+							  (self
+								   confirm: 'Remove ' , aSeagullLocation name , '?'
+								   label: 'Seagull') ifTrue: [
+									  self removeLocation: aSeagullLocation ] ] ] ];
+		  yourself
 ]
 
 { #category : 'updating' }
@@ -187,9 +284,42 @@ Seagull >> locations: aCollectionOfSeagullLocation [
 ]
 
 { #category : 'operations' }
+Seagull >> moveDownLocation [
+
+	| index items item |
+	index := locationList selection selectedIndex.
+	index < 1 ifTrue: [ ^ self ].
+	items := locationList items.
+	index >= items size ifTrue: [ ^ self ].
+	item := items at: index + 1.
+	items at: index + 1 put: (items at: index).
+	items at: index put: item.
+	locationList items: items
+]
+
+{ #category : 'operations' }
+Seagull >> moveUpLocation [
+
+	| index items item |
+	index := locationList selection selectedIndex.
+	index < 2 ifTrue: [ ^ self ].
+	items := locationList items.
+	item := items at: index - 1.
+	items at: index - 1 put: (items at: index).
+	items at: index put: item.
+	locationList items: items
+]
+
+{ #category : 'operations' }
 Seagull >> openDownloads [
 
 	SeagullOSUtils openFile: self downloadDirectory
+]
+
+{ #category : 'operations' }
+Seagull >> openLocationMenuFor: aSeagullLocation [
+
+	(self locationMenuFor: aSeagullLocation) openWithSpecAtPointer
 ]
 
 { #category : 'operations' }
@@ -218,6 +348,13 @@ Seagull >> register: aSeagullLocation [
 		for: self
 ]
 
+{ #category : 'operations' }
+Seagull >> removeLocation: aSeagullLocation [
+
+	locationList items:
+		(locationList items copyWithout: aSeagullLocation)
+]
+
 { #category : 'operations-settings' }
 Seagull >> saveSettings [
 
@@ -241,7 +378,8 @@ Seagull >> saveSettings [
 Seagull >> setJSON: aDictionary [
 
 	aDictionary at: 'locations' ifPresent: [ :locations |
-		locationList items: (locations collect: [ :location |
+		locationList items:
+			(locations collect: [ :location |
 				 SeagullLocation fromJSON: location ]) ]
 ]
 
@@ -249,4 +387,14 @@ Seagull >> setJSON: aDictionary [
 Seagull >> unregister: aSeagullLocation [
 
 	aSeagullLocation announcer unsubscribe: self
+]
+
+{ #category : 'updating' }
+Seagull >> updateButtons [
+
+	| selectedIndex |
+	selectedIndex := locationList selection selectedIndex.
+	moveUpLocationButton enabled: selectedIndex >= 2.
+	moveDownLocationButton enabled:
+		(selectedIndex > 0 and: [ selectedIndex < locationList items size ])
 ]
