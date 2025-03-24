@@ -7,7 +7,8 @@ Class {
 		'refreshLocationListButton',
 		'moveUpLocationButton',
 		'moveDownLocationButton',
-		'addLocationButton'
+		'addLocationButton',
+		'stepProcess'
 	],
 	#category : 'Seagull-Core-UI',
 	#package : 'Seagull-Core',
@@ -193,7 +194,8 @@ Seagull >> initializePresenters [
 		                       yourself.
 	locationList whenBuiltDo: [
 		locationList withAdapterDo: [ :a |
-			a widgetDo: [ :w | w intercellSpacing: 0 @ 0 ] ] ]
+			a widgetDo: [ :w | w intercellSpacing: 0 @ 0 ] ].
+		self startStepping ]
 ]
 
 { #category : 'initialization' }
@@ -203,6 +205,19 @@ Seagull >> initializeWindow: aSpWindowPresenter [
 	aSpWindowPresenter
 		title: 'Seagull';
 		initialExtent: 600 @ 300
+]
+
+{ #category : 'testing' }
+Seagull >> isDisplayed [
+
+	self withAdapterDo: [ :a | a widgetDo: [ :w | ^ w world notNil ] ].
+	^ false
+]
+
+{ #category : 'stepping' }
+Seagull >> isStepping [
+
+	^ stepProcess notNil and: [ stepProcess isRunning ]
 ]
 
 { #category : 'operations-settings' }
@@ -402,6 +417,35 @@ Seagull >> setJSON: aDictionary [
 		locationList items:
 			(locations collect: [ :location |
 				 SeagullLocation fromJSON: location ]) ]
+]
+
+{ #category : 'stepping' }
+Seagull >> startStepping [
+
+	(stepProcess notNil and: [ stepProcess isRunning ]) ifTrue: [
+		stepProcess terminate ].
+	stepProcess := [
+	               [ self isDisplayed ] whileTrue: [
+		               self step.
+		               1 second wait ].
+	               stepProcess := nil ] forkAt:
+		               Processor userBackgroundPriority
+]
+
+{ #category : 'stepping' }
+Seagull >> step [
+
+	locationList items do: #poll.
+	locationList refresh
+]
+
+{ #category : 'stepping' }
+Seagull >> stopStepping [
+
+	(stepProcess notNil and: [ stepProcess isRunning ]) ifFalse: [
+		^ self ].
+	stepProcess terminate.
+	stepProcess := nil
 ]
 
 { #category : 'registration' }

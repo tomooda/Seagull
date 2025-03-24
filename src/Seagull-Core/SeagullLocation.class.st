@@ -292,7 +292,7 @@ SeagullLocation >> doOpenAction [
 { #category : 'operations' }
 SeagullLocation >> doPollingAction [
 
-	policy doPollingAction
+	self isDownloading ifFalse: [ policy doPollingAction ]
 ]
 
 { #category : 'operations' }
