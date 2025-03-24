@@ -9,7 +9,7 @@ Class {
 	#tag : 'Locations'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 SeagullLocationPolicy class >> classFor: aString [
 
 	^ self allSubclasses
@@ -18,7 +18,7 @@ SeagullLocationPolicy class >> classFor: aString [
 		  ifNone: [ self error: 'No class for ' , aString , ' found.' ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing' }
 SeagullLocationPolicy class >> isAbstract [
 
 	^ self = SeagullLocationPolicy
@@ -68,13 +68,13 @@ SeagullLocationPolicy >> doUpdateAction [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 SeagullLocationPolicy >> location [
 
 	^ location
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 SeagullLocationPolicy >> location: aSeagullLocation [
 
 	location := aSeagullLocation
