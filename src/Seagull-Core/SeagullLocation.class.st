@@ -138,10 +138,7 @@ SeagullLocation class >> readyToUpdateIcon [
 { #category : 'icons' }
 SeagullLocation >> actionButtonIcon [
 
-	self readyToOpen ifTrue: [ ^ self openButtonIcon ].
-	self readyToDownload ifTrue: [ ^ self downloadButtonIcon ].
-	self readyToUpdate ifTrue: [ ^ self updateButtonIcon ].
-	^ self iconNamed: #empty
+	^ policy actionButtonIcon
 ]
 
 { #category : 'announcing' }
@@ -199,6 +196,7 @@ SeagullLocation >> asJSON [
 		  at: 'lastAccessTime'
 		  put: (self lastAccessTime ifNotNil: #asString);
 		  at: 'lastOpenTime' put: (self lastOpenTime ifNotNil: #asString);
+		  at: 'etag' put: self etag;
 		  at: 'hasDeadUrl' put: (self ifNotNil: #hasDeadUrl);
 		  yourself
 ]
@@ -360,6 +358,18 @@ SeagullLocation >> edit [
 	presenter openDialog okAction: [
 		presenter accept.
 		self announceSettingsChanged ]
+]
+
+{ #category : 'accessing' }
+SeagullLocation >> etag [
+
+	^ etag
+]
+
+{ #category : 'accessing' }
+SeagullLocation >> etag: aString [
+
+	etag := aString
 ]
 
 { #category : 'operations' }
@@ -669,6 +679,7 @@ SeagullLocation >> setJSON: aDictionary [
 		at: 'lastOpenTime'
 		ifPresent: [ :string |
 			self lastOpenTime: (string ifNotNil: #asDateAndTime) ];
+		at: 'etag' ifPresent: [ :string | self etag: string ];
 		at: 'hasDeadUrl'
 		ifPresent: [ :bool | self hasDeadUrl: bool = true ]
 ]

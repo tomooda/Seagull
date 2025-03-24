@@ -46,10 +46,9 @@ SeagullLocationPresenter >> availableIntervals [
 { #category : 'accessing' }
 SeagullLocationPresenter >> availablePolicies [
 
-	^ {
-		  ('browse' -> 'no-download').
-		  ('download' -> 'manual-download').
-		  ('sync' -> 'sync') }
+	^ ((SeagullLocationPolicy allSubclasses select: [ :class |
+		    class isAbstract not ]) sorted: #order ascending) collect: [
+		  :class | class printName -> class policyName ]
 ]
 
 { #category : 'layout' }

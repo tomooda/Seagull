@@ -7,9 +7,27 @@ Class {
 }
 
 { #category : 'accessing' }
+SeagullManualDownloadPolicy class >> order [
+
+	^ 2.0
+]
+
+{ #category : 'accessing' }
 SeagullManualDownloadPolicy class >> policyName [
 
 	^ 'manual-download'
+]
+
+{ #category : 'accessing' }
+SeagullManualDownloadPolicy class >> printName [
+
+	^ 'download and open'
+]
+
+{ #category : 'icons' }
+SeagullManualDownloadPolicy >> actionButtonIcon [
+
+	^ location openButtonIcon
 ]
 
 { #category : 'operations' }
@@ -52,12 +70,12 @@ SeagullManualDownloadPolicy >> readyToDownload [
 { #category : 'testing' }
 SeagullManualDownloadPolicy >> readyToOpen [
 
-	| remote view |
-	remote := location lastModifiedTimeOnServer.
+	| local view |
+	local := location lastModifiedTimeOfDownloadFile.
 	view := location lastOpenTime.
-	remote ifNil: [ ^ false ].
+	local ifNil: [ ^ false ].
 	view ifNil: [ ^ true ].
-	^ view < remote
+	^ view < local
 ]
 
 { #category : 'testing' }

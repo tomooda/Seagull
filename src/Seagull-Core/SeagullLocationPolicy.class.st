@@ -33,6 +33,12 @@ SeagullLocationPolicy class >> on: aSeagullLocation [
 ]
 
 { #category : 'accessing' }
+SeagullLocationPolicy class >> order [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'accessing' }
 SeagullLocationPolicy class >> policyName [
 
 	^ self subclassResponsibility
@@ -42,6 +48,18 @@ SeagullLocationPolicy class >> policyName [
 SeagullLocationPolicy class >> policyName: aString on: aSeagullLocation [
 
 	^ (self classFor: aString) on: aSeagullLocation
+]
+
+{ #category : 'accessing' }
+SeagullLocationPolicy class >> printName [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'icons' }
+SeagullLocationPolicy >> actionButtonIcon [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'operations' }

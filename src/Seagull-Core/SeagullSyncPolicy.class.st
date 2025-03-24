@@ -7,9 +7,27 @@ Class {
 }
 
 { #category : 'accessing' }
+SeagullSyncPolicy class >> order [
+
+	^ 3.0
+]
+
+{ #category : 'accessing' }
 SeagullSyncPolicy class >> policyName [
 
 	^ 'sync'
+]
+
+{ #category : 'accessing' }
+SeagullSyncPolicy class >> printName [
+
+	^ 'sync and open'
+]
+
+{ #category : 'icons' }
+SeagullSyncPolicy >> actionButtonIcon [
+
+	^ location openButtonIcon
 ]
 
 { #category : 'operations' }
@@ -41,7 +59,7 @@ SeagullSyncPolicy >> doUpdateAction [
 { #category : 'testing' }
 SeagullSyncPolicy >> readyToDownload [
 
-	^ false
+	^ true
 ]
 
 { #category : 'testing' }

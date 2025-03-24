@@ -7,9 +7,27 @@ Class {
 }
 
 { #category : 'accessing' }
+SeagullNoDownloadPolicy class >> order [
+
+	^ 1.0
+]
+
+{ #category : 'accessing' }
 SeagullNoDownloadPolicy class >> policyName [
 
 	^ 'no-download'
+]
+
+{ #category : 'accessing' }
+SeagullNoDownloadPolicy class >> printName [
+
+	^ 'browse'
+]
+
+{ #category : 'icons' }
+SeagullNoDownloadPolicy >> actionButtonIcon [
+
+	^ location openButtonIcon
 ]
 
 { #category : 'operations' }
