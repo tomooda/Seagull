@@ -112,7 +112,7 @@ Seagull >> editLocation: aSeagullLocation [
 		name notEmpty and: [
 			(((locationList items copyWithout: aSeagullLocation) collect: #name)
 				 includes: name) not ] ].
-	presenter openDialog okAction: [ presenter accept ]
+	presenter openModal okAction: [ presenter accept ]
 ]
 
 { #category : 'initialization' }
