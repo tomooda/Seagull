@@ -42,9 +42,9 @@ SeagullCommandLineHandler class >> deploy [
 ]
 
 { #category : 'scripts' }
-SeagullCommandLineHandler class >> generateMacOS [
+SeagullCommandLineHandler class >> generate [
 
-	<script: 'SeagullCommandLineHandler generateMacOS'>
+	<script: 'SeagullCommandLineHandler generate'>
 	PhleeterOnOSX new
 		properties: {
 				(#AppName -> 'Seagull').
