@@ -135,18 +135,32 @@ Seagull >> initializePresenters [
 				                 beNotExpandable;
 				                 width: 20;
 				                 yourself);
-		                addColumn: ((SpStringTableColumn
+		                addColumn:
+			                ((SpStringTableColumn
 				                  title: 'name'
-				                  evaluated: [ :location | location name ])
+				                  evaluated: [ :location |
+					                  location name asText
+						                  addAttribute: (TextFontReference toFont:
+									                   (LogicalFont
+										                    familyName: 'Source Sans Pro'
+										                    pointSize: 12) realFont);
+						                  yourself ])
 				                 displayColor: [ :location | location color ];
 				                 displayBackgroundColor: [ :location |
-					                 location backgroundColor ];
+				                 location backgroundColor ];
 				                 width: 400;
 				                 yourself);
-		                addColumn: ((SpStringTableColumn
+		                addColumn:
+			                ((SpStringTableColumn
 				                  title: ''
 				                  evaluated: [ :location |
-					                  location timeToPoll truncateTo: 1 second ])
+					                  (location timeToPoll truncateTo: 1 second)
+						                  asString asText
+						                  addAttribute: (TextFontReference toFont:
+									                   (LogicalFont
+										                    familyName: 'Source Sans Pro'
+										                    pointSize: 12) realFont);
+						                  yourself ])
 				                 width: 100;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
@@ -195,7 +209,9 @@ Seagull >> initializePresenters [
 		                       yourself.
 	locationList whenBuiltDo: [
 		locationList withAdapterDo: [ :a |
-			a widgetDo: [ :w | w intercellSpacing: 0 @ 0 ] ].
+			a widgetDo: [ :w |
+				w intercellSpacing: 0 @ 0.
+				w inspect ] ].
 		self startStepping ]
 ]
 
