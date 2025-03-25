@@ -209,9 +209,7 @@ Seagull >> initializePresenters [
 		                       yourself.
 	locationList whenBuiltDo: [
 		locationList withAdapterDo: [ :a |
-			a widgetDo: [ :w |
-				w intercellSpacing: 0 @ 0.
-				w inspect ] ].
+			a widgetDo: [ :w | w intercellSpacing: 0 @ 0 ] ].
 		self startStepping ]
 ]
 
