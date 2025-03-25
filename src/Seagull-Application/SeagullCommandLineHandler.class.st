@@ -27,6 +27,9 @@ SeagullCommandLineHandler class >> deploy [
 	IceCredentialStore current in: [ :store |
 		store allCredentials do: [ :each | each removeFrom: store ] ].
 	self currentWorld closeAllWindowsDiscardingChanges.
+	self currentWorld worldState worldRenderer ifNotNil: [ :renderer |
+		renderer windowTitle: 'Seagull'.
+		renderer osWindow extent: 700 @ 300 ].
 	Deprecation
 		raiseWarning: false;
 		showWarning: false.
@@ -125,6 +128,10 @@ SeagullCommandLineHandler >> setupWindow [
 	self currentWorld submorphs copy do: [ :e | e delete ].
 	self currentWorld worldState worldRenderer ifNotNil: [ :renderer |
 		renderer windowTitle: 'Seagull'.
-		renderer osWindow extent: 700 @ 300.
+		renderer osWindow
+			extent: 700 @ 300;
+			icon: (Form fromFileNamed:
+						 FileLocator localDirectory / 'Seagull' / 'resources'
+						 / 'Seagull-icon.png').
 		OSWindowRenderThread createdWindow: renderer osWindow ]
 ]
