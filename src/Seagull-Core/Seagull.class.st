@@ -148,7 +148,7 @@ Seagull >> initializePresenters [
 				                 displayColor: [ :location | location color ];
 				                 displayBackgroundColor: [ :location |
 				                 location backgroundColor ];
-				                 width: 400;
+				                 beExpandable;
 				                 yourself);
 		                addColumn:
 			                ((SpStringTableColumn
@@ -170,10 +170,10 @@ Seagull >> initializePresenters [
 				                 width: 120;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
-				                  title: ''
+				                  title: '  '
 				                  evaluated: [ :item | self iconNamed: #dropDown ])
 				                 action: [ :item | self openLocationMenuFor: item ];
-				                 width: 20;
+				                 width: 30;
 				                 yourself);
 		                whenModelChangedDo: [ :newLocatons :oldLocations |
 			                oldLocations do: [ :location |
