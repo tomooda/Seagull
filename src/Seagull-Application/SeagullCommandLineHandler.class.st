@@ -125,6 +125,6 @@ SeagullCommandLineHandler >> setupWindow [
 	self currentWorld submorphs copy do: [ :e | e delete ].
 	self currentWorld worldState worldRenderer ifNotNil: [ :renderer |
 		renderer windowTitle: 'Seagull'.
-		renderer osWindow extent: 600 @ 300.
+		renderer osWindow extent: 700 @ 300.
 		OSWindowRenderThread createdWindow: renderer osWindow ]
 ]

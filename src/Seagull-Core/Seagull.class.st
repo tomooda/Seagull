@@ -89,9 +89,9 @@ Seagull >> defaultLayout [
 				   add: addLocationButton expand: false;
 				   add: moveUpLocationButton expand: false;
 				   add: moveDownLocationButton expand: false;
-				   add: '   ' width: 80;
-				   add: refreshLocationListButton expand: false;
-				   add: openDownloadsButton expand: false;
+				   add: (SpBoxLayout newHorizontal hAlignEnd
+						    add: refreshLocationListButton expand: false;
+						    add: openDownloadsButton expand: false);
 				   yourself)
 		  expand: false;
 		  yourself
@@ -133,6 +133,7 @@ Seagull >> initializePresenters [
 				                  title: ''
 				                  evaluated: [ :location | location statusIcon ])
 				                 beNotExpandable;
+				                 width: 20;
 				                 yourself);
 		                addColumn: ((SpStringTableColumn
 				                  title: 'name'
@@ -140,7 +141,7 @@ Seagull >> initializePresenters [
 				                 displayColor: [ :location | location color ];
 				                 displayBackgroundColor: [ :location |
 					                 location backgroundColor ];
-				                 beExpandable;
+				                 width: 400;
 				                 yourself);
 		                addColumn: ((SpStringTableColumn
 				                  title: ''
@@ -152,7 +153,7 @@ Seagull >> initializePresenters [
 				                  title: ''
 				                  evaluated: [ :item | item actionButtonIcon ])
 				                 action: [ :item | item doAction ];
-				                 beNotExpandable;
+				                 width: 120;
 				                 yourself);
 		                addColumn: ((SeagullButtonTableColumn
 				                  title: ''
@@ -204,7 +205,7 @@ Seagull >> initializeWindow: aSpWindowPresenter [
 	super initializeWindow: aSpWindowPresenter.
 	aSpWindowPresenter
 		title: 'Seagull';
-		initialExtent: 600 @ 300
+		initialExtent: 700 @ 300
 ]
 
 { #category : 'testing' }
@@ -361,7 +362,7 @@ Seagull >> openLocationMenuFor: aSeagullLocation [
 { #category : 'operations' }
 Seagull >> refreshLocations [
 
-	locationList refresh
+	locationList items do: [ :location | location doUpdateAction ]
 ]
 
 { #category : 'registration' }
