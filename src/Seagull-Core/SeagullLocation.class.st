@@ -210,10 +210,10 @@ SeagullLocation >> asPresenter [
 { #category : 'accessing' }
 SeagullLocation >> backgroundColor [
 
-	self hasDeadUrl ifTrue: [ ^ Color lightGray ].
-	self isDownloading ifTrue: [ ^ Color yellow muchLighter ].
-	self readyToOpen ifTrue: [ ^ Color cyan mixed: 0.2 with: Color white ].
-	^ Color white
+	self hasDeadUrl ifTrue: [ ^ Color gray alpha: 0.2 ].
+	self isDownloading ifTrue: [ ^ Color yellow alpha: 0.2 ].
+	self readyToOpen ifTrue: [ ^ Color cyan alpha: 0.2 ].
+	^ Color transparent
 ]
 
 { #category : 'operations' }
