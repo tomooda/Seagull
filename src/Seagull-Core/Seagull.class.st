@@ -8,7 +8,9 @@ Class {
 		'moveUpLocationButton',
 		'moveDownLocationButton',
 		'addLocationButton',
-		'stepProcess'
+		'stepProcess',
+		'publishButton',
+		'removeLocationButton'
 	],
 	#category : 'Seagull-Core-UI',
 	#package : 'Seagull-Core',
@@ -71,6 +73,12 @@ Seagull >> asJSON [
 		  yourself
 ]
 
+{ #category : 'layout' }
+Seagull >> buttonHeight [
+
+	^ self class buttonHeight
+]
+
 { #category : 'bugfix' }
 Seagull >> confirm: queryString label: titleString [
 
@@ -83,14 +91,19 @@ Seagull >> confirm: queryString label: titleString [
 { #category : 'layout' }
 Seagull >> defaultLayout [
 
+	| buttonWidth |
+	buttonWidth := self buttonHeight * 2.5.
 	^ SpBoxLayout newVertical
 		  add: locationList;
 		  add: (SpBoxLayout newHorizontal
-				   add: addLocationButton expand: false;
-				   add: moveUpLocationButton expand: false;
-				   add: moveDownLocationButton expand: false;
+				   add: addLocationButton width: buttonWidth;
+				   add: moveUpLocationButton width: buttonWidth;
+				   add: moveDownLocationButton width: buttonWidth;
+				   add: removeLocationButton width: buttonWidth;
+				   add: '  ' asPresenter width: buttonWidth / 2.0;
+				   add: publishButton width: buttonWidth;
 				   add: (SpBoxLayout newHorizontal hAlignEnd
-						    add: refreshLocationListButton expand: false;
+						    add: refreshLocationListButton width: buttonWidth;
 						    add: openDownloadsButton expand: false);
 				   yourself)
 		  expand: false;
@@ -116,6 +129,72 @@ Seagull >> editLocation: aSeagullLocation [
 ]
 
 { #category : 'operations' }
+Seagull >> exportLocationsFile [
+
+	| presenter |
+	presenter := StSaveFilePresenter new.
+	presenter previewer: StFileBrowserTextBasedPreviewer new.
+	presenter filter: (StCustomExtensionsFilter extensions: #( '.sgl' )).
+	presenter defaultFolder: FileLocator home asFileReference.
+	presenter bookmarks: { (StFileBrowserGroupBookmark
+			 name: 'Bookmarks'
+			 collection: {
+					 StFileBrowserBookmark home.
+					 StFileBrowserBookmark desktop.
+					 StFileBrowserBookmark downloads.
+					 StFileBrowserBookmark documents.
+					 (StFileBrowserBookmark
+						  name: 'Seagull home'
+						  location: FileLocator seagullHome
+						  icon: (self iconNamed: #home)) }
+			 iconName: 'group') }.
+	presenter columns: { StFileBrowserModificationDateColumn }.
+	presenter openModal.
+	presenter okAction: [ :ref | self exportLocationsFile: ref ].
+	^ presenter confirm
+]
+
+{ #category : 'operations' }
+Seagull >> exportLocationsFile: aFileReference [
+
+	(locationList selectedItems ifEmpty: [ locationList items ])
+		ifNotEmpty: [ :locations |
+			aFileReference writeStreamDo: [ :stream |
+				stream truncate.
+				STONJSON
+					put:
+					{ ('locations' -> (locations collect: #asJSON)) } asDictionary
+					onStreamPretty: stream ] ]
+]
+
+{ #category : 'operations' }
+Seagull >> importLocationsFile [
+
+	| presenter |
+	presenter := StOpenFilePresenter new.
+	presenter previewer: StFileBrowserTextBasedPreviewer new.
+	presenter filter: (StCustomExtensionsFilter extensions: #( '.sgl' )).
+	presenter defaultFolder: FileLocator home asFileReference.
+	presenter bookmarks: { (StFileBrowserGroupBookmark
+			 name: 'Bookmarks'
+			 collection: {
+					 StFileBrowserBookmark home.
+					 StFileBrowserBookmark desktop.
+					 StFileBrowserBookmark downloads.
+					 StFileBrowserBookmark documents.
+					 (StFileBrowserBookmark
+						  name: 'Seagull home'
+						  location: FileLocator seagullHome
+						  icon: (self iconNamed: #home)) }
+			 iconName: 'group') }.
+	presenter columns: { StFileBrowserModificationDateColumn }.
+	presenter openModal.
+	presenter resetBookmarks.
+	presenter okAction: [ :ref | self importLocationsFile: ref ].
+	^ presenter confirm
+]
+
+{ #category : 'operations' }
 Seagull >> importLocationsFile: aFileReference [
 
 	(aFileReference readStreamDo: [ :stream |
@@ -138,6 +217,7 @@ Seagull >> initializePresenters [
 	super initializePresenters.
 	locationList := self newTable
 		                beResizable;
+		                beMultipleSelection;
 		                hideColumnHeaders;
 		                addColumn: ((SpImageTableColumn
 				                  title: ''
@@ -195,17 +275,30 @@ Seagull >> initializePresenters [
 		                whenSelectedItemChangedDo: [ self updateButtons ];
 		                yourself.
 	addLocationButton := self newButton
+		                     help: 'add a new location';
 		                     icon: (self iconNamed: #add);
 		                     action: [ self addLocation ];
 		                     yourself.
 	moveUpLocationButton := self newButton
+		                        help: 'move up the selected location';
 		                        icon: (self iconNamed: #up);
 		                        action: [ self moveUpLocation ];
 		                        yourself.
 	moveDownLocationButton := self newButton
+		                          help: 'move down the selected location';
 		                          icon: (self iconNamed: #down);
 		                          action: [ self moveDownLocation ];
 		                          yourself.
+	removeLocationButton := self newButton
+		                        help: 'remove the selected locations';
+		                        icon: (self iconNamed: #remove);
+		                        action: [ self removeLocation ];
+		                        yourself.
+	publishButton := self newButton
+		                 help: 'publish locations';
+		                 icon: (self iconNamed: #publish);
+		                 action: [ self openPublishMenu ];
+		                 yourself.
 
 	refreshLocationListButton := self newButton
 		                             icon:
@@ -409,6 +502,21 @@ Seagull >> openLocationMenuFor: aSeagullLocation [
 ]
 
 { #category : 'operations' }
+Seagull >> openPublishMenu [
+
+	(self newMenu addGroup: [ :group |
+		 group
+			 addItem: [ :item |
+				 item
+					 name: 'Import locations...';
+					 action: [ self importLocationsFile ] ];
+			 addItem: [ :item |
+				 item
+					 name: 'Export locations...';
+					 action: [ self exportLocationsFile ] ] ]) openWithSpecAtPointer
+]
+
+{ #category : 'operations' }
 Seagull >> refreshLocations [
 
 	locationList items do: [ :location | location doUpdateAction ]
@@ -432,6 +540,13 @@ Seagull >> register: aSeagullLocation [
 		when: SeagullLocationEndDownloading do: [ :announcement |
 			self locationEndedDownloading: announcement location ]
 		for: self
+]
+
+{ #category : 'operations' }
+Seagull >> removeLocation [
+
+	locationList selectedItems ifNotEmpty: [ :locations |
+		locationList items: (locationList items copyWithoutAll: locations) ]
 ]
 
 { #category : 'operations' }
@@ -511,5 +626,6 @@ Seagull >> updateButtons [
 	selectedIndex := locationList selection selectedIndex.
 	moveUpLocationButton enabled: selectedIndex >= 2.
 	moveDownLocationButton enabled:
-		(selectedIndex > 0 and: [ selectedIndex < locationList items size ])
+		(selectedIndex > 0 and: [ selectedIndex < locationList items size ]).
+	removeLocationButton enabled: selectedIndex > 0
 ]
