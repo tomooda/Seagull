@@ -115,6 +115,16 @@ Seagull >> editLocation: aSeagullLocation [
 	presenter openModal okAction: [ presenter accept ]
 ]
 
+{ #category : 'operations' }
+Seagull >> importLocationsFile: aFileReference [
+
+	(aFileReference readStreamDo: [ :stream |
+		 STONJSON fromStream: stream ]) ifNotNil: [ :json |
+		json at: 'locations' ifPresent: [ :array |
+			self mergeLocations:
+				(array collect: [ :dict | SeagullLocation fromJSON: dict ]) ] ]
+]
+
 { #category : 'initialization' }
 Seagull >> initialize [
 
@@ -332,6 +342,31 @@ Seagull >> locations [
 Seagull >> locations: aCollectionOfSeagullLocation [
 
 	locationList items: aCollectionOfSeagullLocation asArray
+]
+
+{ #category : 'operations' }
+Seagull >> mergeLocations: aCollectionOfSeagulLocation [
+
+	| locations urls names |
+	locations := locationList items.
+	urls := (locations collect: [ :location | location url asString ])
+		        asSet.
+	names := (locations collect: #name) asSet.
+	aCollectionOfSeagulLocation do: [ :location |
+		(urls includes: location url asString) ifFalse: [
+			| name |
+			name := location name.
+			(names includes: name) ifTrue: [
+				| prefix index |
+				prefix := name.
+				index := 1.
+				[ names includes: (name := prefix , ' ' , index printString) ]
+					whileTrue: [ index := index + 1 ].
+				location name: name ].
+			locations := locations copyWith: location.
+			names add: name.
+			urls add: location url asString ] ].
+	locationList items: locations
 ]
 
 { #category : 'operations' }
